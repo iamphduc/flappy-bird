@@ -39,11 +39,11 @@ describe('page', () => {
 
   it('controls stay accessible', () => {
     expect(indexHtml).toMatch(/<meta\s+name="viewport"\s+content="width=device-width/);
-    expect(indexHtml.match(/<h1/g) ?? []).toHaveLength(1);
-    expect(indexHtml).toMatch(/<label[^>]*for="new-name"/);
-    const buttons = indexHtml.match(/<button[^>]*>/g) ?? [];
+    expect(indexHtml.match(/<h1\b/g) ?? []).toHaveLength(1);
+    expect(indexHtml).toMatch(/<label\b[^>]*\bfor="new-name"/);
+    const buttons = indexHtml.match(/<button\b[^>]*>/g) ?? [];
     expect(buttons.length).toBeGreaterThan(0);
-    for (const button of buttons) expect(button, button).toMatch(/type="(button|submit)"/);
+    for (const button of buttons) expect(button, button).toMatch(/\btype="(button|submit)"/);
   });
 
   it('there is only one page', () => {
