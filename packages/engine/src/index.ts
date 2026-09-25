@@ -14,6 +14,7 @@ export {
 } from "./game.ts";
 export { DEFAULT_MAX_STEPS, replay, type ReplayResult } from "./replay.ts";
 export * from "./protocol.ts";
+export type * from "./stats.ts";
 
 /** Converts a step count to milliseconds of game time. */
 export function stepsToMs(steps: number): number {

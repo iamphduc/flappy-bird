@@ -61,3 +61,33 @@ Consequences: no native build; Node 22 prints a harmless `ExperimentalWarning` o
 Context: the recorder buffers unacked events; a page reload drops that buffer.
 Decision: accepted for this plan. A game reloaded mid-game (or with unsent events) ends up `incomplete` after the idle timeout.
 Consequences: simple client; a later plan could persist the buffer (e.g. `localStorage`) if lost games matter.
+
+## 2026-09-24 — Wasted flap rule
+Context: the game-over panel and the trend show how many flaps were wasted; the rule needs to be exact and easy to tune after playtesting.
+Decision: a flap is wasted if (a) **rising**: the bird's `vy < 0` in the state the flap is applied to, or (b) **overshoot**: after the flap, with no further flap, the bird's highest point (smallest `y`, found by stepping the engine with no flap until `vy >= 0` or death) is above the top of the next pipe gap (`peakY < gapY - PIPE_GAP / 2`). The next pipe is the first pipe not yet scored in the pre-flap state; with no such pipe there is no overshoot. Rising is checked first, so each wasted flap has one reason. The rule lives in one function, `wastedFlapReason` in `apps/server/src/metrics.ts`.
+Consequences: changing the rule is a one-function change, and (metrics are computed on read) it changes every past game's numbers at once. The locked seed-42 smoke run has 0 wasted flaps.
+
+## 2026-09-24 — Stats metrics are computed on read, not stored
+Context: the summary and trend need per-flap bird state, which the stored result does not have.
+Decision: each stats request replays the stored events with the engine's `createGame`/`step`. No new columns, no migration and no backfill for existing complete games. The trend is capped at the player's last `MAX_TREND_GAMES = 100` counted games to bound the work.
+Consequences: tuning the rule needs no data change. A player's stats request replays up to 100 games; if it gets slow, caching is a later change.
+
+## 2026-09-24 — "Flaps" means applied flaps; extra presses are reported apart
+Context: several presses can land in one step, but only one flap is applied (see "Record raw flap presses").
+Decision: every metric (score per flap, wasted flaps, time between flaps) uses applied flaps: distinct flap steps before death, the stored `flapCount`. Extra presses in the same step (`presses - flaps`) do nothing to the bird, so they are never counted as wasted; the summary reports them as `extraPresses`.
+Consequences: a mashing player is not punished twice for one step; the press count stays visible.
+
+## 2026-09-24 — Which games count in the stats
+Context: games can be unfinished, cut off, fail to die within the replay cap, or disagree with the client.
+Decision: a game counts for its player when its status is `complete`, it has a server death (`death_step` not null) and `mismatch = 0`. `created`/`open`/`incomplete` games never count. A game still alive at the server's replay cap (stored `complete`, null death, `mismatch = 1`) gets no summary (`409 no-server-result`) and no trend point. Other mismatch games still get a summary from the server replay, flagged `mismatch: true, countsInStats: false`, but are left out of the trend. Dev-seeded games (`seedSource: 'dev'`) do count: they only exist outside production, and the smoke check needs them.
+Consequences: the trend only has games the player saw the way the server replayed them.
+
+## 2026-09-24 — Flap timing uses game steps
+Context: "time between flaps" could be measured with wall-clock event times or with game steps.
+Decision: flap gaps are step gaps between consecutive applied flaps, turned into ms with `stepsToMs`. The trend is ordered by `last_event_at` (when the game was last played), then id.
+Consequences: paused time and network delay never count; timing matches what the player felt in the game.
+
+## 2026-09-24 — "My stats" is its own page with inline-SVG charts
+Context: the trend needs a view, and the client has no framework or chart library.
+Decision: "My stats" is a second Vite page (`stats.html`); charts are plain inline SVG strings built by a small helper.
+Consequences: no new dependency; the page is simple but the charts are basic.
