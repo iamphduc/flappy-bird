@@ -137,13 +137,37 @@ describe("ingestEvents", () => {
     expect(getGame(db, "g1")).toMatchObject({ deathStep: 296, clientDeathStep: 400, mismatch: true });
   });
 
-  it("a death the replay does not reach completes without a result", () => {
+  it("an early claimed death still reports the replay death", () => {
     const { db } = setup();
     // No flaps, and a claimed death long before the bird can hit the ground.
-    const outcome = ingest(db, [
+    const events: GameEvent[] = [
       { seq: 0, step: 0, type: "start" },
       { seq: 1, step: 5, type: "death", cause: "ground", score: 0 },
-    ]);
+    ];
+    const expected = replayEvents(42, events);
+    const outcome = ingest(db, events);
+    if ("error" in outcome) throw new Error("unexpected error");
+    expect(outcome.result).toMatchObject({
+      score: expected.score,
+      deathStep: expected.deathStep,
+      deathCause: expected.deathCause,
+      mismatch: true,
+    });
+    expect(getGame(db, "g1")).toMatchObject({ clientDeathStep: 5, mismatch: true });
+  });
+
+  it("a replay still alive at the step limit completes without a result", () => {
+    const { db } = setup();
+    const outcome = ingestEvents(db, {
+      playerId: "p1",
+      gameId: "g1",
+      now: 1000,
+      maxReplaySteps: 10,
+      events: [
+        { seq: 0, step: 0, type: "start" },
+        { seq: 1, step: 5, type: "death", cause: "ground", score: 0 },
+      ],
+    });
     if ("error" in outcome) throw new Error("unexpected error");
     expect(outcome.result).toBeUndefined();
     expect(getGame(db, "g1")).toMatchObject({
