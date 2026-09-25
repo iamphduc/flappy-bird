@@ -244,3 +244,11 @@ describe('recorder', () => {
     expect(sentSeqs(last(), 'g1')).toEqual([0]);
   });
 });
+
+describe('SocketLike', () => {
+  it('a browser WebSocket fits SocketLike', () => {
+    // Compile-time check (pnpm typecheck): the page passes a real WebSocket to connect.
+    const fits = (socket: WebSocket): SocketLike => socket;
+    expect(typeof fits).toBe('function');
+  });
+});
