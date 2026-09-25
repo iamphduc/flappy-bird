@@ -111,6 +111,12 @@ export function getPlayer(db: Db, id: string): PlayerRecord | undefined {
   return { id: str(row.id), nickname: str(row.nickname), createdAt: num(row.created_at) };
 }
 
+/** Changes a player's nickname. True when the player exists (a row changed). */
+export function renamePlayer(db: Db, id: string, nickname: string): boolean {
+  const result = db.prepare("UPDATE players SET nickname = ? WHERE id = ?").run(nickname, id);
+  return Number(result.changes) > 0;
+}
+
 export interface NewGame {
   id: string;
   playerId: string;

@@ -4,6 +4,7 @@ import {
   clearPlayer,
   loadPlayer,
   registerPlayer,
+  renamePlayer,
   reserveGame,
   savePlayer,
   type FetchFn,
@@ -62,6 +63,52 @@ describe('api', () => {
     expect(url).toBe('/api/players');
     expect(init?.method).toBe('POST');
     expect(sentBody(fetchFn)).toEqual({ nickname: 'Ann' });
+
+    // No nickname: the server picks a funny name.
+    const funny = reply(201, { id: 'p2', nickname: 'Wobbly Otter 42' });
+    expect(await registerPlayer(funny)).toEqual({ id: 'p2', nickname: 'Wobbly Otter 42' });
+    const [funnyUrl, funnyInit] = vi.mocked(funny).mock.calls[0]!;
+    expect(funnyUrl).toBe('/api/players');
+    expect(funnyInit?.method).toBe('POST');
+    expect(sentBody(funny)).toEqual({});
+  });
+
+  it('renamePlayer sends the new name or asks for a random one', async () => {
+    const typed = reply(200, { id: 'p/1', nickname: 'Zed' });
+    expect(await renamePlayer(typed, 'p/1', 'Zed')).toEqual({ ok: true, player: { id: 'p/1', nickname: 'Zed' } });
+    const [url, init] = vi.mocked(typed).mock.calls[0]!;
+    expect(url).toBe('/api/players/p%2F1');
+    expect(init?.method).toBe('PATCH');
+    expect(new Headers(init?.headers).get('content-type')).toBe('application/json');
+    expect(sentBody(typed)).toEqual({ nickname: 'Zed' });
+
+    const reroll = reply(200, { id: 'p/1', nickname: 'Wobbly Otter 42' });
+    expect(await renamePlayer(reroll, 'p/1')).toEqual({
+      ok: true,
+      player: { id: 'p/1', nickname: 'Wobbly Otter 42' },
+    });
+    expect(vi.mocked(reroll).mock.calls[0]![0]).toBe('/api/players/p%2F1');
+    expect(vi.mocked(reroll).mock.calls[0]![1]?.method).toBe('PATCH');
+    expect(sentBody(reroll)).toEqual({});
+  });
+
+  it('renamePlayer maps failures', async () => {
+    expect(await renamePlayer(reply(400, { error: 'nickname must be 1-20 characters' }), 'p1', '')).toEqual({
+      ok: false,
+      reason: 'invalid',
+    });
+    expect(await renamePlayer(reply(404, { error: 'unknown player' }), 'p1', 'Zed')).toEqual({
+      ok: false,
+      reason: 'unknown-player',
+    });
+    expect(await renamePlayer(reply(500), 'p1', 'Zed')).toEqual({ ok: false, reason: 'error' });
+    expect(await renamePlayer(vi.fn(async () => Promise.reject(new Error('offline'))), 'p1')).toEqual({
+      ok: false,
+      reason: 'error',
+    });
+    expect(await renamePlayer(reply(200, { id: 'p1' }), 'p1', 'Zed')).toEqual({ ok: false, reason: 'error' });
+    const notJson: FetchFn = vi.fn(async () => new Response('oops', { status: 200 }));
+    expect(await renamePlayer(notJson, 'p1', 'Zed')).toEqual({ ok: false, reason: 'error' });
   });
 
   it('registerPlayer returns null on failure', async () => {

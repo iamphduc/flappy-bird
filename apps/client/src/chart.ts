@@ -4,6 +4,8 @@ export interface TrendChartOptions {
   title: string;
   /** Formats the min/max labels on the y axis (default `String`). */
   format?: (value: number) => string;
+  /** Text shown when there are no values (default `No complete games yet`). */
+  emptyText?: string;
 }
 
 // Room around the plot: title on top, y labels on the left.
@@ -38,7 +40,7 @@ export function trendChartSvg(values: number[], options: TrendChartOptions): str
 
   if (values.length === 0) {
     parts.push(
-      `<text x="${PAD_LEFT + plotW / 2}" y="${top + plotH / 2}" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="currentColor">No complete games yet</text>`,
+      `<text x="${PAD_LEFT + plotW / 2}" y="${top + plotH / 2}" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="currentColor">${escapeXml(options.emptyText ?? 'No complete games yet')}</text>`,
       '</svg>',
     );
     return parts.join('');
@@ -59,8 +61,9 @@ export function trendChartSvg(values: number[], options: TrendChartOptions): str
 
   const label = (v: number, y: number) =>
     `<text x="${PAD_LEFT - 6}" y="${round(y)}" text-anchor="end" dominant-baseline="middle" font-size="11" fill="currentColor">${escapeXml(format(v))}</text>`;
-  // With all-equal values both labels land on the middle line and read the same.
-  parts.push(label(max, yAt(max)), label(min, yAt(min)));
+  // All-equal values would put both labels on the middle line: draw just one.
+  parts.push(label(max, yAt(max)));
+  if (range !== 0) parts.push(label(min, yAt(min)));
 
   parts.push(
     `<polyline points="${pts.map(([x, y]) => `${x},${y}`).join(' ')}" fill="none" stroke="#2a7fb8" stroke-width="2"/>`,
