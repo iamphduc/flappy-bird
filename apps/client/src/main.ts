@@ -1,4 +1,4 @@
-import { STEPS_PER_SECOND, replay, type ServerMessage } from '@flappy/engine';
+import { STEPS_PER_SECOND, replay, type GameSummary, type ServerMessage } from '@flappy/engine';
 import {
   checkPlayer,
   clearPlayer,
@@ -16,6 +16,7 @@ import { createStepper } from './loop.ts';
 import { createRecorder, type Recorder } from './recorder.ts';
 import { render } from './render.ts';
 import { assignGame, createSession, handle, snapshot, tick, type Session, type SessionAction } from './session.ts';
+import { fetchSummary, summaryLines } from './summary.ts';
 
 type ResultMessage = Extract<ServerMessage, { type: 'result' }>;
 
@@ -25,6 +26,7 @@ const playerForm = document.querySelector<HTMLFormElement>('#player-form')!;
 const nicknameInput = document.querySelector<HTMLInputElement>('#nickname')!;
 const playerError = document.querySelector<HTMLSpanElement>('#player-error')!;
 const recordingLine = document.querySelector<HTMLParagraphElement>('#recording')!;
+const summaryPanel = document.querySelector<HTMLElement>('#summary')!;
 
 /** Random uint32 seed. The client may use Math.random; the engine never does. */
 function randomSeed(): number {
@@ -79,6 +81,7 @@ function setPlayer(next: Player): void {
     playerId: next.id,
     onResult: (message) => {
       lastResult = message;
+      onResultForSummary(message);
     },
     onStatus: (status) => {
       online = status === 'online';
@@ -130,6 +133,109 @@ function setSession(next: Session): void {
   if (needsReservation() || (before.phase === 'ready' && session.phase === 'playing')) reserveNext();
 
   forwardEvents();
+  if (before.phase !== 'over' && session.phase === 'over') startSummary();
+  else if (before.phase === 'over' && session.phase !== 'over') clearSummary();
+}
+
+// --- Game-over summary panel -------------------------------------------------------------
+
+/** If no result has come this long after game over, fetch the summary anyway. */
+const SUMMARY_FALLBACK_MS = 5000;
+
+type PanelState =
+  | { kind: 'hidden' }
+  | { kind: 'unrecorded' }
+  | { kind: 'waiting' }
+  | { kind: 'shown'; summary: GameSummary }
+  | { kind: 'no-result' }
+  | { kind: 'error' };
+
+let panel: PanelState = { kind: 'hidden' };
+/** The game the panel is about (the current game, while it is over). */
+let summaryGameId: string | null = null;
+let summaryFallback: ReturnType<typeof setTimeout> | null = null;
+/** Set once a result for `summaryGameId` has triggered a fetch. */
+let fetchedOnResult = false;
+
+function startSummary(): void {
+  clearSummary();
+  const { gameId } = session;
+  if (gameId === null) {
+    showPanel({ kind: 'unrecorded' });
+    return;
+  }
+  summaryGameId = gameId;
+  showPanel({ kind: 'waiting' });
+  if (lastResult?.gameId === gameId) {
+    onResultForSummary(lastResult);
+    return;
+  }
+  summaryFallback = setTimeout(() => {
+    summaryFallback = null;
+    if (summaryGameId === gameId && !fetchedOnResult) loadSummary(gameId);
+  }, SUMMARY_FALLBACK_MS);
+}
+
+function clearSummary(): void {
+  if (summaryFallback !== null) clearTimeout(summaryFallback);
+  summaryFallback = null;
+  summaryGameId = null;
+  fetchedOnResult = false;
+  showPanel({ kind: 'hidden' });
+}
+
+/** A result for an older game (or before this game is over) is ignored. */
+function onResultForSummary(message: ResultMessage): void {
+  if (message.gameId !== summaryGameId || fetchedOnResult) return;
+  fetchedOnResult = true;
+  if (summaryFallback !== null) clearTimeout(summaryFallback);
+  summaryFallback = null;
+  loadSummary(message.gameId);
+}
+
+function loadSummary(gameId: string): void {
+  void fetchSummary(fetchFn, gameId).then((result) => {
+    // The player may have moved on to another game while this was loading.
+    if (summaryGameId !== gameId) return;
+    if (result.ok) showPanel({ kind: 'shown', summary: result.summary });
+    else if (result.reason === 'no-result') showPanel({ kind: 'no-result' });
+    else if (result.reason === 'error') showPanel({ kind: 'error' });
+    // 'pending': the game is not complete yet; keep waiting for its result.
+  });
+}
+
+function paragraph(text: string): HTMLParagraphElement {
+  const p = document.createElement('p');
+  p.textContent = text;
+  return p;
+}
+
+function showPanel(next: PanelState): void {
+  panel = next;
+  summaryPanel.hidden = next.kind === 'hidden';
+  switch (next.kind) {
+    case 'hidden':
+      summaryPanel.replaceChildren();
+      break;
+    case 'unrecorded':
+      summaryPanel.replaceChildren(paragraph('This game was not recorded'));
+      break;
+    case 'waiting':
+      summaryPanel.replaceChildren(paragraph('Waiting for the server…'));
+      break;
+    case 'no-result':
+      summaryPanel.replaceChildren(paragraph('The server could not score this game'));
+      break;
+    case 'error':
+      summaryPanel.replaceChildren(paragraph('Could not load the summary'));
+      break;
+    case 'shown': {
+      const heading = document.createElement('h2');
+      heading.textContent = 'Game summary (from the server)';
+      summaryPanel.replaceChildren(heading, ...summaryLines(next.summary).map(paragraph));
+      break;
+    }
+  }
 }
 
 function forwardEvents(): void {
@@ -280,6 +386,9 @@ if (import.meta.env.DEV) {
     get online() { return online; },
     get pending() { return recorder?.pendingCount() ?? 0; },
     get lastResult() { return lastResult; },
+    get summary() {
+      return panel.kind === 'shown' && summaryGameId === session.gameId ? panel.summary : null;
+    },
     disconnectFor(ms: number) { recorder?.disconnectFor(ms); },
     replay,
   };
