@@ -3,9 +3,9 @@
 // styles/theme.css mirrors every PALETTE key as --color-<kebab-key>; theme.test.ts keeps them in sync.
 
 /** Pixel display font: marquee, headings, buttons, canvas text. */
-export const PIXEL_FONT = '"Pixelify Sans", monospace';
-/** Longer text (card lines, tables). Same family as PIXEL_FONT, used at weight 400. */
-export const BODY_FONT = '"Pixelify Sans", monospace';
+export const PIXEL_FONT = '"VT323", monospace';
+/** Longer text (card lines, tables). Same family as PIXEL_FONT; VT323 has one weight (400). */
+export const BODY_FONT = '"VT323", monospace';
 
 export const PALETTE = {
   /** Page background: the dusk-violet cabinet body. */

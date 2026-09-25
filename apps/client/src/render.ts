@@ -93,7 +93,7 @@ const STARS: ReadonlyArray<readonly [number, number, boolean]> = [
 // Canvas text does not wait for web fonts; ask for the pixel font now so the next frames use it
 // (render runs every animation frame, so the first frames after it loads pick it up).
 if (typeof document !== 'undefined' && document.fonts) {
-  void document.fonts.load(`700 16px ${PIXEL_FONT}`).catch(() => undefined);
+  void document.fonts.load(`400 20px ${PIXEL_FONT}`).catch(() => undefined);
 }
 
 /** Draws one frame: world, score and the overlay for the current phase. */
@@ -240,7 +240,7 @@ function drawBird(ctx: CanvasRenderingContext2D, y: number, vy: number): void {
 }
 
 function setFont(ctx: CanvasRenderingContext2D, size: number): void {
-  ctx.font = `700 ${size}px ${PIXEL_FONT}`;
+  ctx.font = `400 ${size}px ${PIXEL_FONT}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 }
@@ -286,7 +286,7 @@ function overlay(ctx: CanvasRenderingContext2D, lines: string[], dim: boolean): 
   setFont(ctx, 28);
   ctx.fillStyle = SCENE.title;
   ctx.fillText(lines[0]!, cx, top + pad + titleHeight / 2, maxWidth);
-  setFont(ctx, 16);
+  setFont(ctx, 20);
   lines.slice(1).forEach((line, i) => {
     ctx.fillStyle = i === lines.length - 2 ? SCENE.action : SCENE.line;
     ctx.fillText(line, cx, top + pad + titleHeight + i * lineHeight + lineHeight / 2, maxWidth);

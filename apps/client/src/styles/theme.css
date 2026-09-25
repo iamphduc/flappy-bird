@@ -6,15 +6,15 @@
  * buttons, bird yellow for the marquee and big numbers, sky cyan for chart lines. Bold, bright,
  * high contrast, a little playful. Everything sits on a 4 px pixel grid with hard edges.
  *
- * Font: Pixelify Sans (SIL Open Font License 1.1), self-hosted from @fontsource/pixelify-sans,
- * which Vite bundles into dist/assets. One family, two weights:
- *   - 700 (--font-pixel): marquee, headings, buttons, big numbers, canvas text.
- *   - 400 (--font-body): card lines, headline list, table cells.
- * No other font, no font CDN. Pixel type looks best at sizes that are multiples of 4 px
- * (--text-* below); keep body text at 16 px or more so it stays easy to read.
- * Its "fl" / "fi" ligatures draw as one odd glyph ("flaps" reads "Aaps"), so ligatures are off
- * on body (inherited everywhere, SVG text included). Canvas text does not inherit it: only
- * lowercase "fl"/"fi" are hit, so avoid them on the canvas or set ctx.letterSpacing = '1px'.
+ * Font: VT323 (SIL Open Font License 1.1), self-hosted from @fontsource/vt323, which Vite
+ * bundles into dist/assets. It replaced Pixelify Sans, whose C / 5 / 2 read as O / S / 8 at
+ * 14-20 px. One family, one weight (400; VT323 has no bold, so --weight-pixel is 400 too):
+ *   - --font-pixel for the marquee, headings, buttons, big numbers, canvas text.
+ *   - --font-body for card lines, headline list, table cells.
+ * No other font, no font CDN. VT323 draws small for its size, so keep text at 18 px or more
+ * (--text-sm and up below); the canvas overlay lines use 20 px.
+ * Ligatures stay off on body (inherited everywhere, SVG text included) so no font ligature can
+ * merge two letters into one odd glyph.
  *
  * Palette roles (theme.ts PALETTE <-> --color-* below, kept equal by theme.test.ts):
  *   bg          page / cabinet body            surface, surfaceAlt  panels, display, inputs, rows
@@ -38,8 +38,7 @@
  *   - Motion is rare and short (steps(), no easing curves), and all of it is off under
  *     prefers-reduced-motion (the reset below).
  */
-@import '@fontsource/pixelify-sans/latin-400.css';
-@import '@fontsource/pixelify-sans/latin-700.css';
+@import '@fontsource/vt323/latin-400.css';
 
 :root {
   --color-bg: #1d1640;
@@ -57,15 +56,15 @@
   --color-shadow: #0e0a24;
   --color-scrim: rgba(14, 10, 36, 0.78);
 
-  --font-pixel: "Pixelify Sans", monospace;
-  --font-body: "Pixelify Sans", monospace;
-  --weight-pixel: 700;
+  --font-pixel: "VT323", monospace;
+  --font-body: "VT323", monospace;
+  --weight-pixel: 400;
   --weight-body: 400;
 
   /* Type scale (px, on the 4 px grid). */
-  --text-sm: 14px;
-  --text-md: 16px;
-  --text-lg: 20px;
+  --text-sm: 18px;
+  --text-md: 20px;
+  --text-lg: 24px;
   --text-xl: 28px;
   --text-2xl: 40px;
 

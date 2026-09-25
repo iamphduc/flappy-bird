@@ -5,8 +5,8 @@
  *
  * Each section is a framed screen with a dark title strip. Numbers are the loud part: the Last
  * game score is big and yellow, headline values sit at the end of a dotted leader like a
- * high-score table. Numbers use the 700 weight at 20 px or more, since Pixelify's 5 looks like
- * an S at 16 px regular.
+ * high-score table. Numbers use the pixel font at --text-lg (24 px) or more so they read at a
+ * glance.
  */
 #panel {
   width: 360px;
