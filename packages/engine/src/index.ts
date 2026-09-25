@@ -1,8 +1,18 @@
-// Shared game engine, used by both the client and the server.
-// Placeholder until the game-core sprint adds the real physics.
+// Shared, deterministic game engine, used by both the client and the server.
+import { STEPS_PER_SECOND } from "./constants.ts";
 
-/** Physics steps per second. Fixed so games play the same on any screen. */
-export const STEPS_PER_SECOND = 60;
+export * from "./constants.ts";
+export { nextFloat, seedRng } from "./rng.ts";
+export {
+  createGame,
+  step,
+  type Bird,
+  type DeathCause,
+  type GameState,
+  type Pipe,
+  type StepInput,
+} from "./game.ts";
+export { DEFAULT_MAX_STEPS, replay, type ReplayResult } from "./replay.ts";
 
 /** Converts a step count to milliseconds of game time. */
 export function stepsToMs(steps: number): number {
