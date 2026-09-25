@@ -32,7 +32,7 @@ async function connect(app: App) {
   await app.ready(); // plugin decorators such as injectWS exist only after loading
   const ws = await app.injectWS("/api/ws", {}, {
     onInit(socket) {
-      socket.on("message", (data) => {
+      socket.on("message", (data: { toString(): string }) => {
         const msg = JSON.parse(data.toString()) as ServerMessage;
         const waiter = waiters.shift();
         if (waiter) waiter(msg);
@@ -184,7 +184,7 @@ describe("websocket ingest", () => {
   it("frames over 1 MiB close the socket", async () => {
     const { app } = setup();
     const client = await connect(app);
-    const closed = new Promise<number>((resolve) => client.ws.on("close", (code) => resolve(code)));
+    const closed = new Promise<number>((resolve) => client.ws.on("close", (code: number) => resolve(code)));
     client.send("x".repeat(1024 * 1024 + 1));
     expect(await closed).toBe(1009);
   });

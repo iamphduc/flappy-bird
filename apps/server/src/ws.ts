@@ -25,7 +25,8 @@ export function registerWs(app: FastifyInstance, { db, now = Date.now }: WsOptio
       const fail = (code: string, message: string, gameId?: string) =>
         send(gameId === undefined ? { type: "error", code, message } : { type: "error", code, message, gameId });
 
-      socket.on("message", (data) => {
+      // @types/ws is not installed, so the frame type is spelled out here.
+      socket.on("message", (data: { toString(): string }) => {
         let gameId: string | undefined;
         try {
           let raw: unknown;

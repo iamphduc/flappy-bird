@@ -6,7 +6,9 @@ import {
   flapStepsFromEvents,
   replay,
   STEPS_PER_SECOND,
+  type DeathCause,
   type GameEvent,
+  type RecordedFlapSource,
   type ServerMessage,
 } from "@flappy/engine";
 import { getGame, getGameEvents, type Db, type StoredEvent } from "./db.ts";
@@ -23,9 +25,13 @@ export interface IngestInput {
   maxReplaySteps?: number;
 }
 
-export type IngestOutcome = { ack: ServerMessage; result?: ServerMessage } | { error: ServerMessage };
+export type AckMessage = Extract<ServerMessage, { type: "ack" }>;
+export type ResultMessage = Extract<ServerMessage, { type: "result" }>;
+export type ErrorMessage = Extract<ServerMessage, { type: "error" }>;
 
-function errorOf(code: string, message: string, gameId: string): { error: ServerMessage } {
+export type IngestOutcome = { ack: AckMessage; result?: ResultMessage } | { error: ErrorMessage };
+
+function errorOf(code: string, message: string, gameId: string): { error: ErrorMessage } {
   return { error: { type: "error", code, message, gameId } };
 }
 
@@ -45,9 +51,9 @@ function toGameEvent(event: StoredEvent): GameEvent {
   const base = { seq: event.seq, step: event.step };
   switch (event.type) {
     case "flap":
-      return { ...base, type: "flap", source: event.source as "space" };
+      return { ...base, type: "flap", source: event.source as RecordedFlapSource };
     case "death":
-      return { ...base, type: "death", cause: event.cause as "ground", score: event.score ?? 0 };
+      return { ...base, type: "death", cause: event.cause as DeathCause, score: event.score ?? 0 };
     default:
       return { ...base, type: event.type as "start" | "pause" | "resume" };
   }
@@ -70,12 +76,13 @@ function inTransaction<T>(db: Db, work: () => T): T {
  * first write for a seq wins). Completes the game once its death event and
  * every seq before it are stored.
  */
-export function ingestEvents(db: Db, { playerId, gameId, events, now, maxReplaySteps = MAX_REPLAY_STEPS }: IngestInput): IngestOutcome {
+export function ingestEvents(db: Db, input: IngestInput): IngestOutcome {
+  const { playerId, gameId, events, now, maxReplaySteps = MAX_REPLAY_STEPS } = input;
   const game = getGame(db, gameId);
   if (!game) return errorOf("unknown-game", "no such game", gameId);
   if (game.playerId !== playerId) return errorOf("not-your-game", "this game belongs to another player", gameId);
 
-  const ack = (): ServerMessage => ({ type: "ack", gameId, upTo: contiguousUpTo(storedSeqs(db, gameId)) });
+  const ack = (): AckMessage => ({ type: "ack", gameId, upTo: contiguousUpTo(storedSeqs(db, gameId)) });
   if (game.status === "complete") return { ack: ack() };
 
   return inTransaction(db, () => {
@@ -110,7 +117,7 @@ export function ingestEvents(db: Db, { playerId, gameId, events, now, maxReplayS
 }
 
 /** Replays and completes the game if its death and every seq before it are stored. */
-function finalize(db: Db, gameId: string, seed: number, maxReplaySteps: number): ServerMessage | undefined {
+function finalize(db: Db, gameId: string, seed: number, maxReplaySteps: number): ResultMessage | undefined {
   const deathSeq = storedDeathSeq(db, gameId);
   if (deathSeq === null || contiguousUpTo(storedSeqs(db, gameId)) < deathSeq) return undefined;
 
