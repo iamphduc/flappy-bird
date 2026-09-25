@@ -12,6 +12,9 @@
  *   - 400 (--font-body): card lines, headline list, table cells.
  * No other font, no font CDN. Pixel type looks best at sizes that are multiples of 4 px
  * (--text-* below); keep body text at 16 px or more so it stays easy to read.
+ * Its "fl" / "fi" ligatures draw as one odd glyph ("flaps" reads "Aaps"), so ligatures are off
+ * on body (inherited everywhere, SVG text included). Canvas text does not inherit it: only
+ * lowercase "fl"/"fi" are hit, so avoid them on the canvas or set ctx.letterSpacing = '1px'.
  *
  * Palette roles (theme.ts PALETTE <-> --color-* below, kept equal by theme.test.ts):
  *   bg          page / cabinet body            surface, surfaceAlt  panels, display, inputs, rows
@@ -96,6 +99,7 @@ body {
   font-weight: var(--weight-body);
   font-size: var(--text-md);
   line-height: 1.5;
+  font-variant-ligatures: none;
 }
 
 h1,
