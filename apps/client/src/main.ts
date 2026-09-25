@@ -83,7 +83,7 @@ function setPlayer(next: Player): void {
     onStatus: (status) => {
       online = status === 'online';
       // Back online: a failed reservation can be tried again.
-      if (online) reserveNext();
+      if (online && (needsReservation() || session.phase !== 'ready')) reserveNext();
     },
   });
   reserveNext();
@@ -91,6 +91,11 @@ function setPlayer(next: Player): void {
 
 function showPlayerForm(): void {
   playerForm.hidden = false;
+}
+
+/** True while the current game has not started and has no server game yet. */
+function needsReservation(): boolean {
+  return session.phase === 'ready' && session.gameId === null;
 }
 
 /** Asks the server for the next game, unless one is ready or on its way. */
@@ -121,8 +126,8 @@ function setSession(next: Session): void {
     }
   }
   if (session.phase === 'ready' && before.phase !== 'ready') scriptHoldUntil = performance.now() + SCRIPT_HOLD_MS;
-  // Reserve while in ready, and reserve the following game as soon as one starts.
-  if (session.phase === 'ready' || (before.phase === 'ready' && session.phase === 'playing')) reserveNext();
+  // Reserve while in ready without a game, and reserve the following game as soon as one starts.
+  if (needsReservation() || (before.phase === 'ready' && session.phase === 'playing')) reserveNext();
 
   forwardEvents();
 }
