@@ -45,7 +45,7 @@ Consequences: at most one spare `created` game per player; `created` games with 
 ## 2026-09-24 — Client-chosen seeds only outside production
 Context: the `?seed=&flaps=` scripted run must be recorded and checked against known values.
 Decision: outside `NODE_ENV=production` the server accepts a `seed` on `POST /api/games` and stores `seedSource: 'dev'` (normal games: `'server'`). Scripted flaps use flap source `'script'`. A scripted run waits up to 3 s for its server game before it starts (dev only; real play never waits).
-Consequences: dev games can be told apart and left out of stats; production seeds stay server-only.
+Consequences: dev games can be told apart (they still count in stats; see "Which games count in the stats"); production seeds stay server-only.
 
 ## 2026-09-24 — Shared protocol lives in `packages/engine`
 Context: client and server need the same event and message types and the same replay function.
@@ -88,6 +88,22 @@ Decision: flap gaps are step gaps between consecutive applied flaps, turned into
 Consequences: paused time and network delay never count; timing matches what the player felt in the game.
 
 ## 2026-09-24 — "My stats" is its own page with inline-SVG charts
+_Superseded (the page part) by "Override: stats live in a right-hand panel beside the game" (2026-09-25); the inline-SVG charts stay._
 Context: the trend needs a view, and the client has no framework or chart library.
 Decision: "My stats" is a second Vite page (`stats.html`); charts are plain inline SVG strings built by a small helper.
 Consequences: no new dependency; the page is simple but the charts are basic.
+
+## 2026-09-25 — Funny names are made on the server
+Context: plan `arcade-refresh` drops the nickname form; a fresh browser should play a recorded game with no typing.
+Decision: when `POST /api/players` gets no `nickname`, the server picks `<Adjective> <Animal> <n>` (`n` 1–99, e.g. `Wobbly Otter 42`) from the word lists in `apps/server/src/names.ts`. Words are family-friendly, capitalized letters only, and every name fits the same 1–20 character rule as typed names (`cleanNickname`). Names are not unique. Existing players keep their names (no migration).
+Consequences: the word lists are easy to extend; two players can get the same name, which is fine because the player id is the identity.
+
+## 2026-09-25 — Players can rename
+Context: a generated name may not suit the player.
+Decision: `PATCH /api/players/:id` renames a player: `{ nickname }` is checked with the same `cleanNickname` rule (400 if bad), no nickname picks a new funny name (the page's `Random name`), an unknown id gives 404. Only the name changes; the id, games and stats stay attached. Like every other route it trusts the player id, with no auth — this refines "Nickname-only players".
+Consequences: anyone who knows a player id can rename that player (accepted, same as recording games under it). Registration now runs on every fresh visit with no typing, so rate limits matter more before any hosting.
+
+## 2026-09-25 — Override: stats live in a right-hand panel beside the game
+Context: plan `arcade-refresh` wants one page; "My stats is its own page" (2026-09-24) made players leave the game to see their trend. This is a deliberate override of that entry.
+Decision: `stats.html` is removed. One stats UI lives in a right-hand panel on the game page: a `Last game` card on top (the server summary, kept visible while the next game is played), then `My stats` (headline, charts, table). `My stats` reloads after the server has finished each game (when the Last game card gets its summary), with no page reload. On narrow screens (≤ 720 px) the panel stacks below the game.
+Consequences: Vite builds one page; stats code is shared with the game page; the panel's refresh follows the same wait-for-result rule as the summary, so it never races the server.
