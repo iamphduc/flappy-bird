@@ -2,6 +2,8 @@
 
 _Generated: 2026-09-24 · Status: active · Grilled-with: grill-me_
 
+<!-- autopilot-run: started=2026-09-25T02:16:12Z sprints=3 waves=7 -->
+
 ## Goal
 Build a browser Flappy Bird game that streams every flap to a backend, which replays the game to get trusted results and shows each player how efficient they are, both per game and over time.
 
@@ -35,9 +37,9 @@ Constraints: the repo starts empty (see Assumptions). Everything runs locally wi
 
 | Sprint | Goal | Status | Depends on |
 |--------|------|--------|------------|
-| game-core | Monorepo, tested deterministic engine, playable canvas game offline, smoke recipe + CI | planned | — |
-| recording | Fastify + SQLite server, nickname players, WebSocket game sessions with seed, buffer/resend/dedupe, server replay and stored results | planned | game-core |
-| stats | Efficiency metrics from replay, game-over summary, My stats trend page | planned | recording |
+| game-core | Monorepo, tested deterministic engine, playable canvas game offline, smoke recipe + CI | done | — |
+| recording | Fastify + SQLite server, nickname players, WebSocket game sessions with seed, buffer/resend/dedupe, server replay and stored results | done | game-core |
+| stats | Efficiency metrics from replay, game-over summary, My stats trend page | done | recording |
 
 Status values: `planned` / `active` / `done`. The orchestrator only flips its row's Status — it does not rewrite Goal/Depends-on retroactively.
 

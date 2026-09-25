@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My stats - Flappy Bird</title>
+    <!-- Empty icon, so the browser does not ask for /favicon.ico. -->
+    <link rel="icon" href="data:," />
+    <style>
+      body { margin: 0; padding: 16px; font-family: sans-serif; text-align: center; }
+      .headline { list-style: none; padding: 0; margin: 8px 0; }
+      .headline li { margin: 4px 0; }
+      .charts { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin: 16px 0; }
+      .chart { margin: 0; max-width: 100%; }
+      .chart svg { max-width: 100%; height: auto; }
+      .table-wrap { overflow-x: auto; }
+      table { border-collapse: collapse; margin: 0 auto; }
+      th, td { padding: 4px 8px; border-bottom: 1px solid #ccc; white-space: nowrap; }
+      td:not(:first-child):not(:last-child) { text-align: right; }
+      nav { margin: 16px 0; }
+    </style>
+  </head>
+  <body>
+    <h1>My stats</h1>
+    <main id="stats" aria-live="polite"></main>
+    <nav><a href="/">Back to the game</a></nav>
+    <script type="module" src="/src/statsPage.ts"></script>
+  </body>
+</html>
