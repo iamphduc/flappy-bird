@@ -9,22 +9,31 @@
   </head>
   <body>
     <main id="layout">
-      <div id="play">
+      <div id="play" class="cabinet">
+        <header class="marquee">
+          <h1>Flappy Bird</h1>
+        </header>
         <p id="player-bar" hidden>
-          Playing as <strong id="player-name"></strong>
-          <button type="button" id="change-name">Change</button>
+          <span class="player-label">Playing as <strong id="player-name"></strong></span>
+          <button type="button" id="change-name" class="key">Change</button>
         </p>
         <form id="rename-form" hidden>
           <label for="new-name">Name</label>
           <input id="new-name" name="nickname" maxlength="20" autocomplete="off" />
-          <button type="submit">Save</button>
-          <button type="button" id="reroll-name">Random name</button>
-          <button type="button" id="cancel-rename">Cancel</button>
+          <span class="rename-actions">
+            <button type="submit" class="key">Save</button>
+            <button type="button" id="reroll-name" class="key key-quiet">Random name</button>
+            <button type="button" id="cancel-rename" class="key key-quiet">Cancel</button>
+          </span>
           <span id="rename-error" role="alert"></span>
         </form>
-        <canvas id="game" width="288" height="512"></canvas>
-        <p id="recording" aria-live="polite"></p>
-        <p id="status">Checking server…</p>
+        <div class="bezel">
+          <canvas id="game" width="288" height="512" role="img" aria-label="Flappy Bird game"></canvas>
+        </div>
+        <div class="display">
+          <p id="recording" aria-live="polite"></p>
+          <p id="status">Checking server…</p>
+        </div>
       </div>
       <aside id="panel">
         <section id="last-game" aria-live="polite">
