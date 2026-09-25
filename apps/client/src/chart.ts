@@ -29,7 +29,7 @@ export function trendChartSvg(values: number[], options: TrendChartOptions): str
   const format = options.format ?? String;
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeXml(title)}">`,
-    `<text class="chart-title" x="${width / 2}" y="20" text-anchor="middle" font-size="16" font-weight="bold" fill="currentColor">${escapeXml(title)}</text>`,
+    `<text class="chart-title" x="${width / 2}" y="20" text-anchor="middle" font-size="20" font-weight="bold" fill="currentColor">${escapeXml(title)}</text>`,
   ];
 
   const plotW = width - PAD_LEFT - PAD_RIGHT;
@@ -45,7 +45,7 @@ export function trendChartSvg(values: number[], options: TrendChartOptions): str
 
   if (values.length === 0) {
     parts.push(
-      `<text x="${PAD_LEFT + plotW / 2}" y="${top + plotH / 2}" text-anchor="middle" dominant-baseline="middle" font-size="14" fill="currentColor">${escapeXml(options.emptyText ?? 'No complete games yet')}</text>`,
+      `<text x="${PAD_LEFT + plotW / 2}" y="${top + plotH / 2}" text-anchor="middle" dominant-baseline="middle" font-size="18" fill="currentColor">${escapeXml(options.emptyText ?? 'No complete games yet')}</text>`,
       '</svg>',
     );
     return parts.join('');
@@ -65,7 +65,7 @@ export function trendChartSvg(values: number[], options: TrendChartOptions): str
   const pts = values.map((v, i) => [round(xAt(i)), round(yAt(v))] as const);
 
   const label = (v: number, y: number) =>
-    `<text class="chart-label" x="${PAD_LEFT - LABEL_GAP}" y="${round(y)}" text-anchor="end" dominant-baseline="middle" font-size="14" fill="currentColor">${escapeXml(format(v))}</text>`;
+    `<text class="chart-label" x="${PAD_LEFT - LABEL_GAP}" y="${round(y)}" text-anchor="end" dominant-baseline="middle" font-size="18" fill="currentColor">${escapeXml(format(v))}</text>`;
   // All-equal values would put both labels on the middle line: draw just one.
   parts.push(label(max, yAt(max)));
   if (range !== 0) parts.push(label(min, yAt(min)));
