@@ -6,35 +6,6 @@
     <title>Flappy Bird</title>
     <!-- Empty icon, so the browser does not ask for /favicon.ico. -->
     <link rel="icon" href="data:," />
-    <style>
-      body { margin: 0; padding: 16px; font-family: sans-serif; text-align: center; }
-      [hidden] { display: none !important; }
-      /* Game on the left, panel on the right; stacked on narrow screens. */
-      #layout { display: flex; gap: 24px; align-items: flex-start; justify-content: center; }
-      #play { flex: none; max-width: 100%; }
-      #panel { width: 360px; max-width: 100%; min-width: 0; text-align: left; }
-      @media (max-width: 720px) {
-        #layout { flex-direction: column; align-items: center; }
-        #panel { width: 100%; }
-      }
-      /* touch-action: none keeps taps on the canvas from scrolling or zooming the page. */
-      #game { display: block; margin: 0 auto; touch-action: none; user-select: none; cursor: pointer; }
-      #player-bar, #rename-form { margin: 0 0 12px; }
-      #rename-error { color: #b00020; }
-      #recording, #status { margin: 8px 0; }
-      #panel h2 { font-size: 1.1em; margin: 0 0 6px; }
-      #panel section { margin: 0 0 16px; }
-      #panel p { margin: 4px 0; }
-      .headline { list-style: none; padding: 0; margin: 8px 0; }
-      .headline li { margin: 4px 0; }
-      .charts { display: flex; flex-wrap: wrap; gap: 16px; margin: 16px 0; }
-      .chart { margin: 0; max-width: 100%; }
-      .chart svg { max-width: 100%; height: auto; }
-      .table-wrap { overflow-x: auto; }
-      table { border-collapse: collapse; }
-      th, td { padding: 4px 8px; border-bottom: 1px solid #ccc; white-space: nowrap; }
-      td:not(:first-child):not(:last-child) { text-align: right; }
-    </style>
   </head>
   <body>
     <main id="layout">

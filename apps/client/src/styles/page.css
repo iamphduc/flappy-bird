@@ -1,0 +1,44 @@
+/* Page shell: layout, game column, name bar, rename form, status lines. Owner: P1. */
+body {
+  margin: 0;
+  padding: 16px;
+  text-align: center;
+}
+
+/* Game on the left, panel on the right; stacked on narrow screens. */
+#layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: center;
+}
+#play {
+  flex: none;
+  max-width: 100%;
+}
+@media (max-width: 720px) {
+  #layout {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+/* touch-action: none keeps taps on the canvas from scrolling or zooming the page. */
+#game {
+  display: block;
+  margin: 0 auto;
+  touch-action: none;
+  user-select: none;
+  cursor: pointer;
+}
+#player-bar,
+#rename-form {
+  margin: 0 0 12px;
+}
+#rename-error {
+  color: var(--color-danger);
+}
+#recording,
+#status {
+  margin: 8px 0;
+}
