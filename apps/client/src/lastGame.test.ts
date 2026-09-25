@@ -121,6 +121,21 @@ describe('lastGame tracker', () => {
     expect(custom.timers[0]!.ms).toBe(1234);
   });
 
+  it('fetches again when the result came while a pending fallback fetch was out', async () => {
+    const { tracker, fetches, runTimers } = setup();
+    tracker.gameOver('g1');
+    runTimers();
+    tracker.result('g1');
+    expect(fetches).toHaveLength(1);
+    await fetches[0]!.answer({ ok: false, reason: 'pending' });
+    expect(fetches).toHaveLength(2);
+    await fetches[1]!.answer({ ok: true, summary: SUMMARY });
+    expect(tracker.state()).toEqual({ kind: 'shown', gameId: 'g1', summary: SUMMARY });
+    // A late repeat of the result does not fetch again.
+    tracker.result('g1');
+    expect(fetches).toHaveLength(2);
+  });
+
   it('cancels the fallback timer when the result comes', () => {
     const { tracker, fetches, timers, runTimers } = setup();
     tracker.gameOver('g1');
