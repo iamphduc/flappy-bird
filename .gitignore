@@ -5,3 +5,6 @@ dist/
 .env
 .env.*
 .claude/worktrees/
+*.db-wal
+*.db-shm
+apps/server/data/
