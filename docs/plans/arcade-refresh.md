@@ -1,8 +1,6 @@
 # Plan: Funny names, one-page stats and a retro arcade look
 
-_Generated: 2026-09-25 · Status: active · Grilled-with: grill-me_
-
-<!-- autopilot-run: started=2026-09-25T07:57:11Z sprints=2 waves=4 -->
+_Generated: 2026-09-25 · Status: archived · Grilled-with: grill-me_
 
 ## Goal
 Make the game quicker to start and nicer to look at. Players get a random funny name right away (no typing, but they can change it). Their stats sit in a panel on the right of the game instead of on a separate page. The whole app, including the game drawing, gets a retro arcade look.
