@@ -11,6 +11,7 @@ const PAD_TOP = 28;
 const PAD_BOTTOM = 12;
 const PAD_LEFT = 44;
 const PAD_RIGHT = 12;
+const INSET = 8;
 
 /**
  * A small line chart as an inline `<svg>` string: one point per value, left to
@@ -46,10 +47,14 @@ export function trendChartSvg(values: number[], options: TrendChartOptions): str
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min;
-  const xAt = (i: number) =>
-    values.length === 1 ? PAD_LEFT + plotW / 2 : PAD_LEFT + (i * plotW) / (values.length - 1);
+  // Points keep INSET px off the axis lines so dots are not cut by them.
+  const left = PAD_LEFT + INSET;
+  const spanW = plotW - 2 * INSET;
+  const yTop = top + INSET;
+  const spanH = plotH - 2 * INSET;
+  const xAt = (i: number) => (values.length === 1 ? left + spanW / 2 : left + (i * spanW) / (values.length - 1));
   // All-equal values sit on a flat line in the middle.
-  const yAt = (v: number) => (range === 0 ? top + plotH / 2 : top + ((max - v) / range) * plotH);
+  const yAt = (v: number) => (range === 0 ? yTop + spanH / 2 : yTop + ((max - v) / range) * spanH);
   const pts = values.map((v, i) => [round(xAt(i)), round(yAt(v))] as const);
 
   const label = (v: number, y: number) =>
