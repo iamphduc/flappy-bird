@@ -252,4 +252,41 @@ describe('render', () => {
     const outline = calls.find((c) => c.name === 'strokeText' && String(c.args[0]) === '2')!;
     expect(outline.strokeStyle).toBe(SCENE.outline);
   });
+  it('skyline scrolls at a quarter of the pipe speed, in 2 px steps', () => {
+    const leftmost = (step: number) =>
+      Math.min(
+        ...worldRects(draw(stateWith({ step, pipes: [] }), 'playing').calls)
+          .filter((r) => r.color === SCENE.skyline)
+          .map((r) => r.x),
+      );
+    expect(leftmost(0)).toBe(0);
+    expect(leftmost(4)).toBe(-2);
+    expect(leftmost(8)).toBe(-4);
+    for (const step of [0, 3, 8, 101]) {
+      const r = worldRects(draw(stateWith({ step, pipes: [] }), 'playing').calls).filter(
+        (x) => x.color === SCENE.skyline,
+      );
+      for (const b of r) expect(b.y + b.h).toBe(GROUND_Y);
+    }
+  });
+
+  it('wing is up while rising and down while falling', () => {
+    const wingTop = (vy: number) =>
+      draw(stateWith({ bird: { y: 200, vy }, pipes: [] }), 'playing').calls.find(
+        (c) => c.name === 'fillRect' && c.depth === 1 && c.fillStyle === SCENE.wing,
+      )!.args[1] as number;
+    expect(wingTop(-6.5)).toBeLessThan(wingTop(3));
+    expect(wingTop(0)).toBe(wingTop(3));
+  });
+
+  it('only the paused screen is dimmed', () => {
+    const dimmed = (phase: Phase) =>
+      worldRects(draw(stateWith({ death: { step: 1, cause: 'ground' } }), phase).calls).some(
+        (r) => r.color === SCENE.scrim && r.w === WORLD_WIDTH && r.h === WORLD_HEIGHT,
+      );
+    expect(dimmed('paused')).toBe(true);
+    expect(dimmed('ready')).toBe(false);
+    expect(dimmed('playing')).toBe(false);
+    expect(dimmed('over')).toBe(false);
+  });
 });
