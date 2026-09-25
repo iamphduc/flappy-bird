@@ -2,6 +2,8 @@
 
 _Generated: 2026-09-25 · Status: active · Grilled-with: grill-me_
 
+<!-- autopilot-run: started=2026-09-25T07:57:11Z sprints=1 waves=2 -->
+
 ## Goal
 Make the game quicker to start and nicer to look at. Players get a random funny name right away (no typing, but they can change it). Their stats sit in a panel on the right of the game instead of on a separate page. The whole app, including the game drawing, gets a retro arcade look.
 
@@ -37,7 +39,7 @@ Constraints:
 
 | Sprint | Goal | Status | Depends on |
 |--------|------|--------|------------|
-| names-and-layout | Server funny names + rename, auto-player on the client, one-page layout with the right-hand stats panel (last game + trend), separate stats page removed | planned | — |
+| names-and-layout | Server funny names + rename, auto-player on the client, one-page layout with the right-hand stats panel (last game + trend), separate stats page removed | done | — |
 | arcade-look | Retro arcade restyle via the frontend-design skill: page, panel, controls and canvas drawing, plus phone layout polish | planned | names-and-layout |
 
 Status values: `planned` / `active` / `done`. The orchestrator only flips its row's Status — it does not rewrite Goal/Depends-on retroactively.
