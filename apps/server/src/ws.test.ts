@@ -188,4 +188,18 @@ describe("websocket ingest", () => {
     client.send("x".repeat(1024 * 1024 + 1));
     expect(await closed).toBe(1009);
   });
+
+  it("events sent right after hello, without waiting for welcome, are handled in order", async () => {
+    const { app, db } = setup();
+    const client = await connect(app);
+    client.send({ type: "hello", playerId: "p1" });
+    client.send({ type: "events", gameId: "g1", events: lockedRun().slice(0, 4) });
+    client.send({ type: "events", gameId: "g1", events: lockedRun().slice(4) });
+    expect(await client.next()).toEqual({ type: "welcome" });
+    expect(await client.next()).toEqual({ type: "ack", gameId: "g1", upTo: 3 });
+    expect(await client.next()).toEqual({ type: "ack", gameId: "g1", upTo: 8 });
+    expect(await client.next()).toMatchObject({ type: "result", score: 2 });
+    expect(getGame(db, "g1")?.status).toBe("complete");
+    client.ws.terminate();
+  });
 });
