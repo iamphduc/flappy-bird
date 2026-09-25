@@ -4,14 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Flappy Bird</title>
+    <!-- Empty icon, so the browser does not ask for /favicon.ico. -->
+    <link rel="icon" href="data:," />
     <style>
       body { margin: 0; padding: 16px; font-family: sans-serif; text-align: center; }
       /* touch-action: none keeps taps on the canvas from scrolling or zooming the page. */
       #game { display: block; margin: 0 auto; touch-action: none; user-select: none; cursor: pointer; }
+      #player-form { margin: 0 auto 12px; }
+      #player-form[hidden] { display: none; }
+      #player-error { color: #b00020; }
+      #recording, #status { margin: 8px 0; }
     </style>
   </head>
   <body>
+    <form id="player-form" hidden>
+      <label for="nickname">Nickname</label>
+      <input id="nickname" name="nickname" maxlength="20" required autocomplete="off" />
+      <button type="submit">Save</button>
+      <span id="player-error" role="alert"></span>
+    </form>
     <canvas id="game" width="288" height="512"></canvas>
+    <p id="recording" aria-live="polite"></p>
     <p id="status">Checking server…</p>
     <script type="module" src="/src/main.ts"></script>
   </body>
