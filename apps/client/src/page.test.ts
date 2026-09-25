@@ -27,6 +27,23 @@ describe('page', () => {
     expect(indexHtml).toMatch(/<canvas\b[^>]*\bwidth="288"[^>]*\bheight="512"/);
     expect(indexHtml).not.toContain('stats.html');
     expect(indexHtml).not.toContain('player-form');
+    for (const id of ['last-game-body', 'my-stats-body']) expect(indexHtml).toContain(`id="${id}"`);
+    // Name bar, rename form, canvas and the two status lines stay inside #play, in this order.
+    const play = indexHtml.slice(indexHtml.indexOf('id="play"'), indexHtml.indexOf('id="panel"'));
+    const order = ['player-bar', 'rename-form', 'game', 'recording', 'status'].map((id) =>
+      play.indexOf(`id="${id}"`),
+    );
+    expect(order.every((at) => at > 0), 'all inside #play').toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it('controls stay accessible', () => {
+    expect(indexHtml).toMatch(/<meta\s+name="viewport"\s+content="width=device-width/);
+    expect(indexHtml.match(/<h1\b/g) ?? []).toHaveLength(1);
+    expect(indexHtml).toMatch(/<label\b[^>]*\bfor="new-name"/);
+    const buttons = indexHtml.match(/<button\b[^>]*>/g) ?? [];
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const button of buttons) expect(button, button).toMatch(/\btype="(button|submit)"/);
   });
 
   it('there is only one page', () => {
