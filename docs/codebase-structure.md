@@ -4,7 +4,7 @@
 
 The **`## Smoke recipe`** below tells each engineer how to bring the app up for browser verification (per `pod:engineer`'s instructions).
 
-**Status: skeleton only.** The parts below exist and run, but hold placeholders. The real game, recording and stats arrive with plan `flappy-efficiency-mvp` (`docs/plans/`).
+**Status: playable offline game.** The engine and the canvas game are real; the server still only has `/api/health`. Recording and stats arrive later in plan `flappy-efficiency-mvp` (`docs/plans/`).
 
 ## What it is
 
@@ -13,7 +13,7 @@ A browser Flappy Bird game. Each flap is streamed to a backend, which replays th
 ## Parts
 
 - **`packages/engine`** — shared, deterministic game engine (fixed 60 steps/s, seeded pipes). Pure TypeScript, no DOM or Node APIs, so both the client and the server can run it.
-- **`apps/client`** — Vite + plain HTML canvas game. Talks to the server through the Vite dev proxy (`/api`).
+- **`apps/client`** — Vite + plain HTML canvas game. A pure session state machine (ready / playing / paused / over) wraps the engine; a `requestAnimationFrame` loop runs a fixed-timestep stepper (60 steps/s whatever the refresh rate) and draws the state on a 288 x 512 canvas. Dev builds read `?seed=&flaps=` for a scripted run and expose `window.__flappy`. Talks to the server through the Vite dev proxy (`/api`).
 - **`apps/server`** — Node + Fastify API. SQLite storage and WebSocket game sessions are planned, not built yet.
 
 ## How they connect
@@ -48,5 +48,7 @@ Not running yet: the repo has no GitHub remote so far.
 - **DB setup:** none yet (SQLite arrives in the recording sprint).
 - **Login credentials:** none — no auth. Players will pick a nickname.
 - **Key URLs:** game at `http://localhost:<WEB_PORT>/` (use `localhost`, not `127.0.0.1` — see known issues); API health at `http://localhost:<WEB_PORT>/api/health` → `{"ok":true,...}`.
-- **Browser check:** the page shows a canvas and the text `Server OK · engine at 60 steps/s` under it.
+- **Browser check:** open `http://localhost:<WEB_PORT>/?seed=42&flaps=13,52,90,128,166,199,237`. The run plays by itself (player flaps are ignored) and ends after about 5 s. Then in the console `window.__flappy` must show `phase: 'over'`, `score: 2`, `step: 296`, `death: { step: 296, cause: 'ground' }`, `flapCount: 7` — the same as `window.__flappy.replay(42, [13,52,90,128,166,199,237])` (`score`, `deathStep`, `deathCause`, `flapCount`). The text `Server OK · engine at 60 steps/s` shows under the canvas.
+- **Controls:** Space, mouse click or touch tap on the canvas flaps (the first flap starts the game; a flap after game over starts a new one). P or Escape pauses and resumes. Hiding the tab pauses. Space never scrolls the page.
+- **Headless tip:** if the DevTools MCP can't start a browser, run Chrome with `--headless=new --user-data-dir=<temp dir> --remote-debugging-port=<port>` and read `window.__flappy` over CDP (`Runtime.evaluate`).
 - **Verification:** `pnpm check` (typecheck + tests + build).

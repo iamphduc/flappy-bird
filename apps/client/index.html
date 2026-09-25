@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Flappy Bird</title>
+    <style>
+      body { margin: 0; padding: 16px; font-family: sans-serif; text-align: center; }
+      /* touch-action: none keeps taps on the canvas from scrolling or zooming the page. */
+      #game { display: block; margin: 0 auto; touch-action: none; user-select: none; cursor: pointer; }
+    </style>
   </head>
   <body>
     <canvas id="game" width="288" height="512"></canvas>
