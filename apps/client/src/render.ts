@@ -7,9 +7,9 @@ import {
   PIPE_WIDTH,
   WORLD_HEIGHT,
   WORLD_WIDTH,
-  type DeathCause,
   type GameState,
 } from '@flappy/engine';
+import { causeText } from './format.ts';
 import type { Phase } from './session.ts';
 
 const COLORS = {
@@ -28,12 +28,6 @@ const COLORS = {
   shade: 'rgba(0, 0, 0, 0.35)',
 };
 
-const CAUSE_TEXT: Record<DeathCause, string> = {
-  ground: 'Hit the ground',
-  'pipe-top': 'Hit the top pipe',
-  'pipe-bottom': 'Hit the bottom pipe',
-};
-
 /** Draws one frame: world, score and the overlay for the current phase. */
 export function render(ctx: CanvasRenderingContext2D, game: GameState, phase: Phase): void {
   ctx.fillStyle = COLORS.sky;
@@ -50,7 +44,7 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, phase: Ph
   } else if (phase === 'paused') {
     overlay(ctx, ['Paused', 'P or Esc to resume']);
   } else if (phase === 'over') {
-    const cause = game.death ? CAUSE_TEXT[game.death.cause] : '';
+    const cause = game.death ? causeText(game.death.cause) : '';
     overlay(ctx, ['Game over', `Score: ${game.score}`, cause, 'Flap to restart']);
   }
 }
