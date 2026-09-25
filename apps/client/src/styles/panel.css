@@ -1,9 +1,21 @@
-/* Right-hand panel: Last game card and My stats (headline, charts, table). Owner: P2. */
+/*
+ * Right-hand panel as an arcade scoreboard: Last game card and My stats (headline, charts, table).
+ * Owner: P2. Direction and tokens: see the header of theme.css (4 px grid, hard edges, no radius,
+ * no blur, depth from --border-width borders plus --shadow-hard).
+ *
+ * Each section is a framed screen with a dark title strip. Numbers are the loud part: the Last
+ * game score is big and yellow, headline values sit at the end of a dotted leader like a
+ * high-score table. Numbers use the 700 weight at 20 px or more, since Pixelify's 5 looks like
+ * an S at 16 px regular.
+ */
 #panel {
   width: 360px;
   max-width: 100%;
   min-width: 0;
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
 }
 @media (max-width: 720px) {
   #panel {
@@ -11,50 +23,144 @@
   }
 }
 
-#panel h2 {
-  font-size: 1.1em;
-  margin: 0 0 6px;
-}
+/* ---- Screens ---- */
 #panel section {
-  margin: 0 0 16px;
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  box-shadow: var(--shadow-hard);
+  min-width: 0;
 }
+
+#panel h2 {
+  margin: 0 calc(-1 * var(--space-3)) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-shadow);
+  border-bottom: var(--border-width) solid var(--color-border);
+  color: var(--color-highlight);
+  font-size: var(--text-lg);
+  line-height: 1.2;
+}
+
 #panel p {
-  margin: 4px 0;
+  margin: var(--space-1) 0;
 }
+
+/* ---- Last game readout ---- */
+/* A lone line is a message (No game yet, Waiting for the server…, errors). */
+#last-game-body p:only-child,
+#my-stats-body > p:only-child {
+  color: var(--color-text-muted);
+}
+/* With a summary, the first line is the score: the big number on the board. */
+#last-game-body p:first-child:not(:only-child) {
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: var(--border-width) dotted var(--color-border);
+  color: var(--color-highlight);
+  font-family: var(--font-pixel);
+  font-weight: var(--weight-pixel);
+  font-size: var(--text-2xl);
+  line-height: 1;
+}
+
+/* ---- Headline: label ..... value ---- */
 .headline {
   list-style: none;
   padding: 0;
-  margin: 8px 0;
+  margin: 0 0 var(--space-4);
 }
 .headline li {
-  margin: 4px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  margin: var(--space-2) 0;
 }
+.headline .label {
+  color: var(--color-text-muted);
+}
+/* Square 4 px dots on the grid, sitting on the text baseline. */
+.headline .leader {
+  flex: 1 1 var(--space-4);
+  min-width: var(--space-4);
+  height: var(--px);
+  background: linear-gradient(to right, var(--color-border) 50%, transparent 50%) left / calc(2 * var(--px)) var(--px)
+    repeat-x;
+}
+.headline .value {
+  margin-left: auto;
+  text-align: right;
+  color: var(--color-highlight);
+  font-family: var(--font-pixel);
+  font-weight: var(--weight-pixel);
+  font-size: var(--text-lg);
+  line-height: 1.2;
+  /* A long value (the Deaths line) wraps onto even lines instead of leaving one word. */
+  text-wrap: balance;
+}
+
+/* ---- Charts: small dark screens inside the panel ---- */
 .charts {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  margin: 16px 0;
+  gap: var(--space-4);
+  margin: 0 0 var(--space-4);
 }
 .chart {
   margin: 0;
   max-width: 100%;
+  box-sizing: border-box;
+  background: var(--color-shadow);
+  border: var(--border-width) solid var(--color-border);
+  /* Axes and y labels are drawn in currentColor. */
+  color: var(--color-text-muted);
 }
 .chart svg {
+  display: block;
   max-width: 100%;
   height: auto;
 }
+.chart .chart-title {
+  fill: var(--color-text);
+  font-family: var(--font-pixel);
+}
+
+/* ---- Games table: scrolls inside its own frame ---- */
 .table-wrap {
   overflow-x: auto;
+  max-width: 100%;
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-surface);
+  scrollbar-color: var(--color-border) var(--color-shadow);
 }
 table {
   border-collapse: collapse;
+  min-width: 100%;
 }
 th,
 td {
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-1) var(--space-2);
   white-space: nowrap;
+}
+th {
+  background: var(--color-shadow);
+  border-bottom: var(--border-width) solid var(--color-border);
+  color: var(--color-text-muted);
+  font-family: var(--font-pixel);
+  font-weight: var(--weight-pixel);
+  text-align: left;
+}
+tbody tr:nth-child(even) {
+  background: var(--color-surface-alt);
 }
 td:not(:first-child):not(:last-child) {
   text-align: right;
+}
+/* Score column: the number people look for first. */
+td:nth-child(2) {
+  color: var(--color-highlight);
+  font-family: var(--font-pixel);
+  font-weight: var(--weight-pixel);
 }
