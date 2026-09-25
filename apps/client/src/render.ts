@@ -105,7 +105,8 @@ function drawBird(ctx: CanvasRenderingContext2D, y: number, vy: number): void {
 
 function overlay(ctx: CanvasRenderingContext2D, lines: string[]): void {
   const lineHeight = 30;
-  const top = WORLD_HEIGHT / 2 - 40 - (lines.length * lineHeight) / 2;
+  // Centered below the bird start height so the ready overlay does not hide the bird.
+  const top = WORLD_HEIGHT / 2 + 40 - (lines.length * lineHeight) / 2;
   ctx.fillStyle = COLORS.shade;
   ctx.fillRect(16, top - 8, WORLD_WIDTH - 32, lines.length * lineHeight + 16);
   lines.forEach((line, i) => {
