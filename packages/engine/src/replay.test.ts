@@ -8,7 +8,7 @@ import { replay } from "./replay.ts";
  * flapping and dies. The client smoke check can use the same list.
  */
 const SCRIPTED_SEED = 42;
-const SCRIPTED_FLAPS: number[] = [];
+const SCRIPTED_FLAPS = [13, 52, 90, 128, 166, 199, 237];
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -78,8 +78,8 @@ describe("replay", () => {
     expect(r.deathStep).not.toBeNull();
     // Locked regression values: change only on purpose (it means the game was re-tuned).
     expect({ score: r.score, deathStep: r.deathStep, deathCause: r.deathCause }).toEqual({
-      score: -1,
-      deathStep: -1,
+      score: 2,
+      deathStep: 296,
       deathCause: "ground",
     });
   });
