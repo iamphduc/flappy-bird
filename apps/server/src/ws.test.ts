@@ -29,6 +29,7 @@ function setup(): { app: App; db: Db } {
 async function connect(app: App) {
   const queue: ServerMessage[] = [];
   const waiters: ((msg: ServerMessage) => void)[] = [];
+  await app.ready(); // plugin decorators such as injectWS exist only after loading
   const ws = await app.injectWS("/api/ws", {}, {
     onInit(socket) {
       socket.on("message", (data) => {
