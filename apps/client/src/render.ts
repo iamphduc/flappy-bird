@@ -23,7 +23,7 @@ import { PALETTE, PIXEL_FONT } from './theme.ts';
 /** Canvas-only colors: shades the page palette does not need. PALETTE values are reused where they fit. */
 export const SCENE = {
   /** Sky bands from the top of the screen down to the horizon. */
-  sky: [PALETTE.bg, PALETTE.surface, '#3a2878', '#56308c', '#7c3a98', '#a8469c', '#d4589a', '#f27a8c'],
+  sky: [PALETTE.surface, '#32276e', '#3e2a7e', '#56308c', '#7c3a98', '#a8469c', '#d4589a', '#f27a8c'],
   starBright: PALETTE.text,
   starDim: PALETTE.textMuted,
   skyline: '#241a50',
@@ -64,14 +64,15 @@ const GRID = 4;
 const PIPE_CAP_HEIGHT = 24;
 /** Where each sky band starts; the last band runs down to the ground. */
 const SKY_BAND_TOPS = [0, 112, 176, 224, 264, 296, 324, 348];
-/** Skyline buildings as [x, width, height], repeated every SKYLINE_PERIOD px. */
+/** Skyline buildings as [x, width, height], side by side, repeated every SKYLINE_PERIOD px. */
 const SKYLINE: ReadonlyArray<readonly [number, number, number]> = [
   [0, 20, 44],
-  [24, 28, 72],
-  [56, 16, 36],
-  [76, 24, 96],
-  [104, 12, 52],
-  [120, 20, 64],
+  [20, 28, 72],
+  [48, 16, 36],
+  [64, 24, 96],
+  [88, 16, 52],
+  [104, 24, 64],
+  [128, 16, 32],
 ];
 const SKYLINE_PERIOD = 144;
 /** Stars as [x, y, bright]. Fixed, so they never twinkle. */
@@ -110,7 +111,8 @@ export function render(ctx: CanvasRenderingContext2D, game: GameState, phase: Ph
     overlay(ctx, ['Paused', 'P or Esc to resume'], true);
   } else if (phase === 'over') {
     const cause = game.death ? causeText(game.death.cause) : '';
-    overlay(ctx, ['Game over', `Score: ${game.score}`, cause, 'Flap to restart'], true);
+    // Not dimmed, so the bird is still seen where it hit.
+    overlay(ctx, ['Game over', `Score: ${game.score}`, cause, 'Flap to restart'], false);
   }
 }
 
