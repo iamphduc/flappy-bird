@@ -54,11 +54,7 @@ export function renderStatsMessage(root: HTMLElement, text: string): void {
 export function renderStats(root: HTMLElement, view: StatsView): void {
   const headline = document.createElement('ul');
   headline.className = 'headline';
-  for (const line of view.headline) {
-    const li = document.createElement('li');
-    li.textContent = line;
-    headline.append(li);
-  }
+  for (const line of view.headline) headline.append(headlineItem(line));
   const parts: HTMLElement[] = [headline];
   if (view.rows.length > 0) {
     const charts = document.createElement('div');
@@ -76,6 +72,30 @@ export function renderStats(root: HTMLElement, view: StatsView): void {
 }
 
 /** Splits `Label: value` at the first `: ` so the value can be styled on its own; null if it has no such shape. */
-export function splitLine(_line: string): { label: string; value: string } | null {
-  return null;
+export function splitLine(line: string): { label: string; value: string } | null {
+  const at = line.indexOf(': ');
+  if (at <= 0 || at + 2 >= line.length) return null;
+  return { label: line.slice(0, at + 1), value: line.slice(at + 2) };
+}
+
+function span(className: string, text: string): HTMLSpanElement {
+  const el = document.createElement('span');
+  el.className = className;
+  el.textContent = text;
+  return el;
+}
+
+/** A headline row: label, a dotted leader and the value, like a high-score table. Its textContent is the line as given. */
+function headlineItem(line: string): HTMLLIElement {
+  const li = document.createElement('li');
+  const parts = splitLine(line);
+  if (parts === null) {
+    li.textContent = line;
+    return li;
+  }
+  const leader = document.createElement('span');
+  leader.className = 'leader';
+  leader.setAttribute('aria-hidden', 'true');
+  li.append(span('label', parts.label), ' ', leader, span('value', parts.value));
+  return li;
 }
