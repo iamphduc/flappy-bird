@@ -1,5 +1,9 @@
-import { createGame, step, type GameState } from '@flappy/engine';
+import { createGame, step, type GameEvent, type GameState, type RecordedFlapSource } from '@flappy/engine';
 import type { Action } from './input.ts';
+
+/** A `GameEvent` before its seq is given out. */
+type NewEvent = DistributiveOmit<GameEvent, 'seq'>;
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 export type Phase = 'ready' | 'playing' | 'paused' | 'over';
 
@@ -20,8 +24,12 @@ export interface Session {
   game: GameState;
   /** Step numbers the bird flapped on, in order. */
   flaps: number[];
-  /** A player flap waiting for the next tick. */
-  pendingFlap: boolean;
+  /** Server game id for this game, or null when it is not recorded. */
+  gameId: string | null;
+  /** Recorded events of the current game, seq contiguous from 0. */
+  events: GameEvent[];
+  /** Flap presses waiting for the next tick, in order. Each becomes its own flap event. */
+  pendingPresses: RecordedFlapSource[];
   script: ReadonlySet<number> | null;
   nextSeed: (current: number) => number;
 }
@@ -42,7 +50,9 @@ export function createSession({ seed, script, nextSeed }: SessionOptions): Sessi
     seed,
     game: createGame(seed),
     flaps: [],
-    pendingFlap: false,
+    gameId: null,
+    events: [],
+    pendingPresses: [],
     script: script ? new Set(script) : null,
     nextSeed: nextSeed ?? mixSeed,
   };
@@ -53,14 +63,24 @@ export function handle(session: Session, action: SessionAction): Session {
     case 'restart':
       return restart(session);
     case 'pause':
-      if (session.phase === 'playing') return { ...session, phase: 'paused', pendingFlap: false };
-      if (session.phase === 'paused') return { ...session, phase: 'playing' };
+      // Pausing drops pending presses; they were never applied, so they are never recorded.
+      if (session.phase === 'playing') {
+        return { ...record(session, { step: session.game.step, type: 'pause' }), phase: 'paused', pendingPresses: [] };
+      }
+      if (session.phase === 'paused') {
+        return { ...record(session, { step: session.game.step, type: 'resume' }), phase: 'playing' };
+      }
       return session;
     case 'flap':
       if (session.phase === 'over') return restart(session);
       if (session.script) return session;
-      if (session.phase === 'ready') return { ...session, phase: 'playing', pendingFlap: true };
-      if (session.phase === 'playing') return { ...session, pendingFlap: true };
+      if (session.phase === 'ready') {
+        const started = record(session, { step: 0, type: 'start' });
+        return { ...started, phase: 'playing', pendingPresses: [action.source] };
+      }
+      if (session.phase === 'playing') {
+        return { ...session, pendingPresses: [...session.pendingPresses, action.source] };
+      }
       return session;
   }
 }
@@ -68,18 +88,33 @@ export function handle(session: Session, action: SessionAction): Session {
 /** Runs one engine step while playing. A scripted session also starts itself from ready. */
 export function tick(session: Session): Session {
   let s = session;
-  if (s.phase === 'ready' && s.script) s = { ...s, phase: 'playing' };
+  if (s.phase === 'ready' && s.script) s = { ...record(s, { step: 0, type: 'start' }), phase: 'playing' };
   if (s.phase !== 'playing') return s;
 
-  const flap = s.script ? s.script.has(s.game.step) : s.pendingFlap;
+  // Presses are stamped with the step they are applied on; the engine gets one flap for them all.
+  const at = s.game.step;
+  const presses: RecordedFlapSource[] = s.script ? (s.script.has(at) ? ['script'] : []) : s.pendingPresses;
+  for (const source of presses) s = record(s, { step: at, type: 'flap', source });
+
+  const flap = presses.length > 0;
   const game = step(s.game, { flap });
-  return {
+  s = {
     ...s,
     game,
-    flaps: flap ? [...s.flaps, s.game.step] : s.flaps,
-    pendingFlap: false,
+    flaps: flap ? [...s.flaps, at] : s.flaps,
+    pendingPresses: [],
     phase: game.death === null ? 'playing' : 'over',
   };
+  if (game.death !== null) {
+    s = record(s, { step: game.death.step, type: 'death', cause: game.death.cause, score: game.score });
+  }
+  return s;
+}
+
+/** Gives a server game to a session that has not started yet; otherwise returns it unchanged. */
+export function assignGame(session: Session, { gameId, seed }: { gameId: string; seed: number }): Session {
+  if (session.phase !== 'ready' || session.events.length > 0) return session;
+  return { ...session, gameId, seed, game: createGame(seed) };
 }
 
 export function snapshot(session: Session): Snapshot {
@@ -102,8 +137,16 @@ function restart(session: Session): Session {
     seed,
     game: createGame(seed),
     flaps: [],
-    pendingFlap: false,
+    gameId: null,
+    events: [],
+    pendingPresses: [],
   };
+}
+
+/** Appends an event with the next seq. */
+function record(session: Session, event: NewEvent): Session {
+  const seq = session.events.length;
+  return { ...session, events: [...session.events, { ...event, seq } as GameEvent] };
 }
 
 /** Deterministic uint32 mix, used only when no nextSeed is given. */

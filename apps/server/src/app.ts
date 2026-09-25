@@ -3,6 +3,7 @@ import { STEPS_PER_SECOND } from "@flappy/engine";
 import { openDb, type Db } from "./db.ts";
 import { gameRoutes } from "./gameRoutes.ts";
 import { playerRoutes } from "./players.ts";
+import { registerWs } from "./ws.ts";
 
 export interface BuildAppOptions {
   /** Defaults to a fresh in-memory database. */
@@ -25,6 +26,7 @@ export function buildApp({ db = openDb(":memory:"), devSeeds = false }: BuildApp
   app.get("/api/health", async () => ({ ok: true, stepsPerSecond: STEPS_PER_SECOND }));
   app.register(playerRoutes, { db });
   app.register(gameRoutes, { db, devSeeds });
+  registerWs(app, { db });
 
   return app;
 }
