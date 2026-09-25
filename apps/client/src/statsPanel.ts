@@ -1,15 +1,12 @@
-// Entry for stats.html: the current player's trend across counted games.
-import { loadPlayer } from './api.ts';
+// The "My stats" part of the side panel: headline, two trend charts and the games table.
 import { trendChartSvg } from './chart.ts';
 import { formatRatio } from './format.ts';
-import { fetchStats, statsView } from './stats.ts';
+import type { StatsView } from './stats.ts';
 
-const NO_PLAYER_TEXT = 'No player yet - play a game first';
 const CHART_WIDTH = 320;
 const CHART_HEIGHT = 180;
+const CHART_EMPTY_TEXT = 'No games with flaps yet';
 const TABLE_HEADINGS = ['Played', 'Score', 'Flaps', 'Score per flap', 'Wasted', 'Time between flaps', 'Died'];
-
-const root = document.querySelector<HTMLElement>('#stats')!;
 
 function paragraph(text: string): HTMLParagraphElement {
   const p = document.createElement('p');
@@ -17,15 +14,17 @@ function paragraph(text: string): HTMLParagraphElement {
   return p;
 }
 
-function showMessage(text: string): void {
-  root.replaceChildren(paragraph(text));
-}
-
 function chart(values: number[], title: string, format?: (v: number) => string): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'chart';
   // trendChartSvg escapes all its text, so the string is safe to insert.
-  figure.innerHTML = trendChartSvg(values, { width: CHART_WIDTH, height: CHART_HEIGHT, title, format });
+  figure.innerHTML = trendChartSvg(values, {
+    width: CHART_WIDTH,
+    height: CHART_HEIGHT,
+    title,
+    format,
+    emptyText: CHART_EMPTY_TEXT,
+  });
   return figure;
 }
 
@@ -46,17 +45,13 @@ function table(rows: string[][]): HTMLTableElement {
   return el;
 }
 
-async function start(): Promise<void> {
-  const player = loadPlayer(localStorage);
-  if (!player) return showMessage(NO_PLAYER_TEXT);
+/** Replaces `root`'s content with one line of text. */
+export function renderStatsMessage(root: HTMLElement, text: string): void {
+  root.replaceChildren(paragraph(text));
+}
 
-  showMessage('Loading…');
-  const result = await fetchStats(fetch, player.id);
-  if (!result.ok) return showMessage(result.reason === 'unknown-player' ? NO_PLAYER_TEXT : 'Could not load your stats');
-
-  const view = statsView(result.stats);
-  const heading = document.createElement('h2');
-  heading.textContent = result.stats.nickname;
+/** Replaces `root`'s content with the stats view. */
+export function renderStats(root: HTMLElement, view: StatsView): void {
   const headline = document.createElement('ul');
   headline.className = 'headline';
   for (const line of view.headline) {
@@ -64,7 +59,7 @@ async function start(): Promise<void> {
     li.textContent = line;
     headline.append(li);
   }
-  const parts: HTMLElement[] = [heading, headline];
+  const parts: HTMLElement[] = [headline];
   if (view.rows.length > 0) {
     const charts = document.createElement('div');
     charts.className = 'charts';
@@ -79,5 +74,3 @@ async function start(): Promise<void> {
   }
   root.replaceChildren(...parts);
 }
-
-void start();

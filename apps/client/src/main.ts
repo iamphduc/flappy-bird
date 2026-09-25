@@ -1,32 +1,32 @@
-import { STEPS_PER_SECOND, replay, type GameSummary, type ServerMessage } from '@flappy/engine';
-import {
-  checkPlayer,
-  clearPlayer,
-  loadPlayer,
-  registerPlayer,
-  reserveGame,
-  savePlayer,
-  type Player,
-  type ReservedGame,
-  type StorageLike,
-} from './api.ts';
+import { STEPS_PER_SECOND, replay, type PlayerStats, type ServerMessage } from '@flappy/engine';
+import { reserveGame, type Player, type RenameResult, type ReservedGame, type StorageLike } from './api.ts';
 import { parseDevParams } from './devParams.ts';
 import { actionFromKey, actionFromPointer } from './input.ts';
+import { createLastGame, lastGameView, type LastGameState } from './lastGame.ts';
 import { createStepper } from './loop.ts';
+import { changeName, ensurePlayer, nicknameError } from './player.ts';
 import { createRecorder, type Recorder } from './recorder.ts';
 import { render } from './render.ts';
 import { assignGame, createSession, handle, snapshot, tick, type Session, type SessionAction } from './session.ts';
-import { fetchSummary, summaryLines } from './summary.ts';
+import { fetchStats, statsView } from './stats.ts';
+import { renderStats, renderStatsMessage } from './statsPanel.ts';
+import { fetchSummary } from './summary.ts';
 
 type ResultMessage = Extract<ServerMessage, { type: 'result' }>;
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game')!;
 const ctx = canvas.getContext('2d')!;
-const playerForm = document.querySelector<HTMLFormElement>('#player-form')!;
-const nicknameInput = document.querySelector<HTMLInputElement>('#nickname')!;
-const playerError = document.querySelector<HTMLSpanElement>('#player-error')!;
+const playerBar = document.querySelector<HTMLParagraphElement>('#player-bar')!;
+const playerName = document.querySelector<HTMLElement>('#player-name')!;
+const changeNameButton = document.querySelector<HTMLButtonElement>('#change-name')!;
+const renameForm = document.querySelector<HTMLFormElement>('#rename-form')!;
+const newNameInput = document.querySelector<HTMLInputElement>('#new-name')!;
+const rerollButton = document.querySelector<HTMLButtonElement>('#reroll-name')!;
+const cancelRenameButton = document.querySelector<HTMLButtonElement>('#cancel-rename')!;
+const renameError = document.querySelector<HTMLSpanElement>('#rename-error')!;
 const recordingLine = document.querySelector<HTMLParagraphElement>('#recording')!;
-const summaryPanel = document.querySelector<HTMLElement>('#summary')!;
+const lastGameBody = document.querySelector<HTMLElement>('#last-game-body')!;
+const statsBody = document.querySelector<HTMLElement>('#my-stats-body')!;
 
 /** Random uint32 seed. The client may use Math.random; the engine never does. */
 function randomSeed(): number {
@@ -58,6 +58,8 @@ let session: Session = createSession({
 const SCRIPT_HOLD_MS = 3000;
 
 let player: Player | null = null;
+/** Before there is a player: the first lookup is still out, or it failed (retrying). */
+let playerLookup: 'pending' | 'failed' = 'pending';
 let recorder: Recorder | null = null;
 let online = false;
 /** A reserved server game waiting for the next game to start. */
@@ -72,7 +74,8 @@ let scriptHoldUntil = performance.now() + SCRIPT_HOLD_MS;
 
 function setPlayer(next: Player): void {
   player = next;
-  playerForm.hidden = true;
+  showPlayerName();
+  loadStats();
   recorder = createRecorder({
     connect: () => {
       const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -81,7 +84,7 @@ function setPlayer(next: Player): void {
     playerId: next.id,
     onResult: (message) => {
       lastResult = message;
-      onResultForSummary(message);
+      lastGame.result(message.gameId);
     },
     onStatus: (status) => {
       online = status === 'online';
@@ -90,10 +93,6 @@ function setPlayer(next: Player): void {
     },
   });
   reserveNext();
-}
-
-function showPlayerForm(): void {
-  playerForm.hidden = false;
 }
 
 /** True while the current game has not started and has no server game yet. */
@@ -133,109 +132,8 @@ function setSession(next: Session): void {
   if (needsReservation() || (before.phase === 'ready' && session.phase === 'playing')) reserveNext();
 
   forwardEvents();
-  if (before.phase !== 'over' && session.phase === 'over') startSummary();
-  else if (before.phase === 'over' && session.phase !== 'over') clearSummary();
-}
-
-// --- Game-over summary panel -------------------------------------------------------------
-
-/** If no result has come this long after game over, fetch the summary anyway. */
-const SUMMARY_FALLBACK_MS = 5000;
-
-type PanelState =
-  | { kind: 'hidden' }
-  | { kind: 'unrecorded' }
-  | { kind: 'waiting' }
-  | { kind: 'shown'; summary: GameSummary }
-  | { kind: 'no-result' }
-  | { kind: 'error' };
-
-let panel: PanelState = { kind: 'hidden' };
-/** The game the panel is about (the current game, while it is over). */
-let summaryGameId: string | null = null;
-let summaryFallback: ReturnType<typeof setTimeout> | null = null;
-/** Set once a result for `summaryGameId` has triggered a fetch. */
-let fetchedOnResult = false;
-
-function startSummary(): void {
-  clearSummary();
-  const { gameId } = session;
-  if (gameId === null) {
-    showPanel({ kind: 'unrecorded' });
-    return;
-  }
-  summaryGameId = gameId;
-  showPanel({ kind: 'waiting' });
-  if (lastResult?.gameId === gameId) {
-    onResultForSummary(lastResult);
-    return;
-  }
-  summaryFallback = setTimeout(() => {
-    summaryFallback = null;
-    if (summaryGameId === gameId && !fetchedOnResult) loadSummary(gameId);
-  }, SUMMARY_FALLBACK_MS);
-}
-
-function clearSummary(): void {
-  if (summaryFallback !== null) clearTimeout(summaryFallback);
-  summaryFallback = null;
-  summaryGameId = null;
-  fetchedOnResult = false;
-  showPanel({ kind: 'hidden' });
-}
-
-/** A result for an older game (or before this game is over) is ignored. */
-function onResultForSummary(message: ResultMessage): void {
-  if (message.gameId !== summaryGameId || fetchedOnResult) return;
-  fetchedOnResult = true;
-  if (summaryFallback !== null) clearTimeout(summaryFallback);
-  summaryFallback = null;
-  loadSummary(message.gameId);
-}
-
-function loadSummary(gameId: string): void {
-  void fetchSummary(fetchFn, gameId).then((result) => {
-    // The player may have moved on to another game while this was loading.
-    if (summaryGameId !== gameId) return;
-    if (result.ok) showPanel({ kind: 'shown', summary: result.summary });
-    else if (result.reason === 'no-result') showPanel({ kind: 'no-result' });
-    else if (result.reason === 'error') showPanel({ kind: 'error' });
-    // 'pending': the game is not complete yet; keep waiting for its result.
-  });
-}
-
-function paragraph(text: string): HTMLParagraphElement {
-  const p = document.createElement('p');
-  p.textContent = text;
-  return p;
-}
-
-function showPanel(next: PanelState): void {
-  panel = next;
-  summaryPanel.hidden = next.kind === 'hidden';
-  switch (next.kind) {
-    case 'hidden':
-      summaryPanel.replaceChildren();
-      break;
-    case 'unrecorded':
-      summaryPanel.replaceChildren(paragraph('This game was not recorded'));
-      break;
-    case 'waiting':
-      summaryPanel.replaceChildren(paragraph('Waiting for the server…'));
-      break;
-    case 'no-result':
-      summaryPanel.replaceChildren(paragraph('The server could not score this game'));
-      break;
-    case 'error':
-      summaryPanel.replaceChildren(paragraph('Could not load the summary'));
-      break;
-    case 'shown': {
-      const heading = document.createElement('h2');
-      heading.textContent = 'Game summary (from the server)';
-      summaryPanel.replaceChildren(heading, ...summaryLines(next.summary).map(paragraph));
-      break;
-    }
-  }
+  // The Last game card keeps the finished game on restart; only a new game over replaces it.
+  if (before.phase !== 'over' && session.phase === 'over') lastGame.gameOver(session.gameId);
 }
 
 function forwardEvents(): void {
@@ -252,7 +150,7 @@ function forwardEvents(): void {
 }
 
 function recordingText(): string {
-  if (!player) return 'Enter a nickname to record your games';
+  if (!player) return playerLookup === 'pending' ? 'Getting your player name…' : 'Offline - this game is not recorded';
   const { gameId, phase } = session;
   if (gameId === null) {
     if (phase === 'ready' && reserving) return `Recording as ${player.nickname}`;
@@ -265,60 +163,131 @@ function recordingText(): string {
   return online ? `Recording as ${player.nickname}` : `Recording as ${player.nickname} (reconnecting)`;
 }
 
-async function loadStoredPlayer(): Promise<void> {
-  const stored = loadPlayer(storage);
-  if (stored) {
-    try {
-      const known = await checkPlayer(fetchFn, stored.id);
-      if (known) {
-        setPlayer(known);
-      } else {
-        clearPlayer(storage);
-        showPlayerForm();
-      }
-    } catch {
-      // The server cannot answer right now: keep the stored player; the recorder retries.
-      setPlayer(stored);
-    }
+// --- Player: automatic funny name, name bar and rename form ------------------------------
+
+/** How long to wait before asking for a player again when registering failed. */
+const PLAYER_RETRY_MS = 5000;
+
+async function findPlayer(): Promise<void> {
+  const found = await ensurePlayer(storage, fetchFn);
+  if (found) {
+    setPlayer(found);
     return;
   }
-  if (session.script) {
-    // A scripted dev run registers itself so it can be recorded without typing.
-    const smoke = await registerPlayer(fetchFn, 'smoke');
-    if (smoke) {
-      saveQuietly(smoke);
-      setPlayer(smoke);
-      return;
-    }
-  }
-  showPlayerForm();
+  playerLookup = 'failed';
+  if (statsFor === null) renderStatsMessage(statsBody, STATS_ERROR_TEXT);
+  setTimeout(() => void findPlayer(), PLAYER_RETRY_MS);
 }
 
-function saveQuietly(p: Player): void {
-  try {
-    savePlayer(storage, p);
-  } catch {
-    // Storage full or blocked: the player only lasts for this page.
-  }
+function showPlayerName(): void {
+  if (!player) return;
+  playerName.textContent = player.nickname;
+  playerBar.hidden = false;
 }
 
-playerForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-  const nickname = nicknameInput.value.trim();
-  if (nickname.length === 0 || nickname.length > 20) {
-    playerError.textContent = 'Use 1 to 20 characters.';
-    return;
-  }
-  playerError.textContent = '';
-  void registerPlayer(fetchFn, nickname).then((registered) => {
-    if (!registered) {
-      playerError.textContent = 'Could not save the nickname. Try again.';
+let renaming = false;
+
+function openRenameForm(): void {
+  if (!player) return;
+  newNameInput.value = player.nickname;
+  renameError.textContent = '';
+  renameForm.hidden = false;
+  newNameInput.focus();
+  newNameInput.select();
+}
+
+function closeRenameForm(): void {
+  renameForm.hidden = true;
+  renameError.textContent = '';
+  // Give the keyboard back to the game, so Space flaps again.
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+}
+
+/** Renames the player (a random name when `nickname` is undefined); `close` shuts the form on success. */
+function rename(nickname: string | undefined, close: boolean): void {
+  if (!player || renaming) return;
+  renaming = true;
+  renameError.textContent = '';
+  void changeName(storage, fetchFn, player, nickname).then((result: RenameResult) => {
+    renaming = false;
+    if (!result.ok) {
+      renameError.textContent =
+        result.reason === 'invalid' ? 'Use 1 to 20 characters.' : 'Could not change the name. Try again.';
       return;
     }
-    saveQuietly(registered);
-    setPlayer(registered);
+    player = result.player;
+    showPlayerName();
+    if (close) closeRenameForm();
+    else newNameInput.value = result.player.nickname;
   });
+}
+
+changeNameButton.addEventListener('click', openRenameForm);
+cancelRenameButton.addEventListener('click', closeRenameForm);
+rerollButton.addEventListener('click', () => rename(undefined, false));
+renameForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const error = nicknameError(newNameInput.value);
+  if (error) {
+    renameError.textContent = error;
+    return;
+  }
+  rename(newNameInput.value.trim(), true);
 });
+
+// --- Side panel: Last game card and My stats ---------------------------------------------
+
+function paragraph(text: string): HTMLParagraphElement {
+  const p = document.createElement('p');
+  p.textContent = text;
+  return p;
+}
+
+function showLastGame(state: LastGameState): void {
+  lastGameBody.replaceChildren(...lastGameView(state).map(paragraph));
+}
+
+const lastGame = createLastGame({
+  fetchSummary: (gameId) => fetchSummary(fetchFn, gameId),
+  setTimer: (fn, ms) => {
+    const timer = setTimeout(fn, ms);
+    return () => clearTimeout(timer);
+  },
+  onChange: (state) => {
+    showLastGame(state);
+    // The server has finished this game, so the stats now include it.
+    if (state.kind === 'shown') loadStats();
+  },
+});
+
+const STATS_ERROR_TEXT = 'Could not load your stats';
+/** The last loaded stats (for the dev hook). */
+let stats: PlayerStats | null = null;
+/** The player whose stats are on screen, or null before the first load finished. */
+let statsFor: string | null = null;
+/** Bumped per request; an answer to an older request is ignored. */
+let statsRequest = 0;
+
+function loadStats(): void {
+  if (!player) return;
+  const playerId = player.id;
+  const request = ++statsRequest;
+  // The first load says so; later refreshes keep the old content until the new one arrives.
+  if (statsFor === null) renderStatsMessage(statsBody, 'Loading…');
+  void fetchStats(fetchFn, playerId).then((result) => {
+    if (request !== statsRequest) return;
+    if (!result.ok) {
+      renderStatsMessage(statsBody, STATS_ERROR_TEXT);
+      return;
+    }
+    stats = result.stats;
+    statsFor = playerId;
+    renderStats(statsBody, statsView(result.stats));
+  });
+}
+
+showLastGame(lastGame.state());
+renderStatsMessage(statsBody, 'Loading…');
 
 // --- Game loop and input -----------------------------------------------------------------
 
@@ -357,8 +326,8 @@ function frame(now: number): void {
 }
 
 window.addEventListener('keydown', (event) => {
-  // Typing in the nickname form is not game input.
-  if (event.target instanceof HTMLInputElement) return;
+  // Typing in the rename form, or a key on a focused button, is not game input.
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLButtonElement) return;
   // Stop Space from scrolling the page, including key repeats.
   if (event.code === 'Space') event.preventDefault();
   const action = actionFromKey(event);
@@ -387,8 +356,10 @@ if (import.meta.env.DEV) {
     get pending() { return recorder?.pendingCount() ?? 0; },
     get lastResult() { return lastResult; },
     get summary() {
-      return panel.kind === 'shown' && summaryGameId === session.gameId ? panel.summary : null;
+      const state = lastGame.state();
+      return state.kind === 'shown' && state.gameId === session.gameId ? state.summary : null;
     },
+    get stats() { return stats; },
     disconnectFor(ms: number) { recorder?.disconnectFor(ms); },
     replay,
   };
@@ -396,7 +367,7 @@ if (import.meta.env.DEV) {
 }
 
 requestAnimationFrame(frame);
-void loadStoredPlayer();
+void findPlayer();
 
 const status = document.querySelector<HTMLParagraphElement>('#status')!;
 fetch('/api/health')
