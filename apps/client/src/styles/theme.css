@@ -1,0 +1,130 @@
+/*
+ * DIRECTION: "Dusk Cabinet"
+ *
+ * Mood: an arcade cabinet in a dim room just after sunset. The page is the cabinet body, a deep
+ * dusk violet (not black), and the game's own colors come back as its lights: pipe green for
+ * buttons, bird yellow for the marquee and big numbers, sky cyan for chart lines. Bold, bright,
+ * high contrast, a little playful. Everything sits on a 4 px pixel grid with hard edges.
+ *
+ * Font: Pixelify Sans (SIL Open Font License 1.1), self-hosted from @fontsource/pixelify-sans,
+ * which Vite bundles into dist/assets. One family, two weights:
+ *   - 700 (--font-pixel): marquee, headings, buttons, big numbers, canvas text.
+ *   - 400 (--font-body): card lines, headline list, table cells.
+ * No other font, no font CDN. Pixel type looks best at sizes that are multiples of 4 px
+ * (--text-* below); keep body text at 16 px or more so it stays easy to read.
+ *
+ * Palette roles (theme.ts PALETTE <-> --color-* below, kept equal by theme.test.ts):
+ *   bg          page / cabinet body            surface, surfaceAlt  panels, display, inputs, rows
+ *   text        main text                      textMuted            labels, secondary lines
+ *   accent      buttons (pipe green)           accentText           text on accent
+ *   highlight   marquee, scores (bird yellow)  danger               error text
+ *   focus       :focus-visible ring only       border               pixel borders, bezel edges
+ *   chartLine   chart line + dots (sky cyan)   shadow               hard drop shadows
+ *   scrim       see-through overlay layer
+ * Contrast: every text pair is at least 4.5:1; focus ring, chart line and borders at least 3:1
+ * (CONTRAST_PAIRS in theme.ts). The focus ring is drawn with an offset so it sits on bg or
+ * surface, never on an accent button (magenta on green is too close).
+ *
+ * Frame and border rules:
+ *   - No rounded corners (--radius is 0) and no blurred shadows. Depth comes from solid
+ *     --border-width borders in --color-border plus a hard offset shadow (--shadow-hard).
+ *   - Pressed / active controls move down by --px and lose their shadow, like a real button.
+ *   - Space in steps of --px (4 px): --space-1 .. --space-6.
+ *   - Need a shade the palette lacks? Mix it from tokens in your own file, e.g.
+ *     color-mix(in srgb, var(--color-accent) 80%, white). Do not add raw hex colors.
+ *   - Motion is rare and short (steps(), no easing curves), and all of it is off under
+ *     prefers-reduced-motion (the reset below).
+ */
+@import '@fontsource/pixelify-sans/latin-400.css';
+@import '@fontsource/pixelify-sans/latin-700.css';
+
+:root {
+  --color-bg: #1d1640;
+  --color-surface: #2a2160;
+  --color-surface-alt: #362b78;
+  --color-text: #fff6e0;
+  --color-text-muted: #c3b8ec;
+  --color-accent: #5ec639;
+  --color-accent-text: #14102e;
+  --color-highlight: #ffd84a;
+  --color-danger: #ff8a94;
+  --color-focus: #ff5ce1;
+  --color-border: #7a68d6;
+  --color-chart-line: #6fe3f2;
+  --color-shadow: #0e0a24;
+  --color-scrim: rgba(14, 10, 36, 0.78);
+
+  --font-pixel: "Pixelify Sans", monospace;
+  --font-body: "Pixelify Sans", monospace;
+  --weight-pixel: 700;
+  --weight-body: 400;
+
+  /* Type scale (px, on the 4 px grid). */
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+  --text-2xl: 40px;
+
+  /* Pixel grid and spacing. */
+  --px: 4px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Frames. */
+  --border-width: 4px;
+  --radius: 0;
+  --shadow-hard: var(--px) var(--px) 0 var(--color-shadow);
+  --focus-ring: 3px solid var(--color-focus);
+  --focus-offset: 3px;
+
+  color-scheme: dark;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-weight: var(--weight-body);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-pixel);
+  font-weight: var(--weight-pixel);
+}
+
+/* Form controls use the pixel font too (browsers default them to a system font). */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

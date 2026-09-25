@@ -1,0 +1,60 @@
+/* Right-hand panel: Last game card and My stats (headline, charts, table). Owner: P2. */
+#panel {
+  width: 360px;
+  max-width: 100%;
+  min-width: 0;
+  text-align: left;
+}
+@media (max-width: 720px) {
+  #panel {
+    width: 100%;
+  }
+}
+
+#panel h2 {
+  font-size: 1.1em;
+  margin: 0 0 6px;
+}
+#panel section {
+  margin: 0 0 16px;
+}
+#panel p {
+  margin: 4px 0;
+}
+.headline {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+.headline li {
+  margin: 4px 0;
+}
+.charts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 16px 0;
+}
+.chart {
+  margin: 0;
+  max-width: 100%;
+}
+.chart svg {
+  max-width: 100%;
+  height: auto;
+}
+.table-wrap {
+  overflow-x: auto;
+}
+table {
+  border-collapse: collapse;
+}
+th,
+td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+td:not(:first-child):not(:last-child) {
+  text-align: right;
+}

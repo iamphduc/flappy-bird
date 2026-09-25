@@ -1,3 +1,6 @@
+import './styles/theme.css';
+import './styles/page.css';
+import './styles/panel.css';
 import { STEPS_PER_SECOND, replay, type PlayerStats, type ServerMessage } from '@flappy/engine';
 import { reserveGame, type Player, type RenameResult, type ReservedGame, type StorageLike } from './api.ts';
 import { parseDevParams } from './devParams.ts';
