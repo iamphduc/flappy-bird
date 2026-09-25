@@ -180,4 +180,12 @@ describe("websocket ingest", () => {
     expect(health.statusCode).toBe(200);
     client.ws.terminate();
   });
+
+  it("frames over 1 MiB close the socket", async () => {
+    const { app } = setup();
+    const client = await connect(app);
+    const closed = new Promise<number>((resolve) => client.ws.on("close", (code) => resolve(code)));
+    client.send("x".repeat(1024 * 1024 + 1));
+    expect(await closed).toBe(1009);
+  });
 });

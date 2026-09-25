@@ -336,4 +336,14 @@ describe("startSweeper", () => {
     expect(getGame(long.db, "g1")?.status).toBe("incomplete");
     stopLong();
   });
+
+  it("keeps running when a sweep fails", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const { db } = setup();
+    const stop = startSweeper(db, { timeoutMs: 1000, intervalMs: 500 });
+    db.close();
+    expect(() => vi.advanceTimersByTime(1000)).not.toThrow();
+    stop();
+  });
 });
