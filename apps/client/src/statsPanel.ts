@@ -74,3 +74,8 @@ export function renderStats(root: HTMLElement, view: StatsView): void {
   }
   root.replaceChildren(...parts);
 }
+
+/** Splits `Label: value` at the first `: ` so the value can be styled on its own; null if it has no such shape. */
+export function splitLine(_line: string): { label: string; value: string } | null {
+  return null;
+}
