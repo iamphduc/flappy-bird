@@ -8,30 +8,64 @@
     <link rel="icon" href="data:," />
     <style>
       body { margin: 0; padding: 16px; font-family: sans-serif; text-align: center; }
+      [hidden] { display: none !important; }
+      /* Game on the left, panel on the right; stacked on narrow screens. */
+      #layout { display: flex; gap: 24px; align-items: flex-start; justify-content: center; }
+      #play { flex: none; max-width: 100%; }
+      #panel { width: 360px; max-width: 100%; min-width: 0; text-align: left; }
+      @media (max-width: 720px) {
+        #layout { flex-direction: column; align-items: center; }
+        #panel { width: 100%; }
+      }
       /* touch-action: none keeps taps on the canvas from scrolling or zooming the page. */
       #game { display: block; margin: 0 auto; touch-action: none; user-select: none; cursor: pointer; }
-      #player-form { margin: 0 auto 12px; }
-      #player-form[hidden] { display: none; }
-      #player-error { color: #b00020; }
+      #player-bar, #rename-form { margin: 0 0 12px; }
+      #rename-error { color: #b00020; }
       #recording, #status { margin: 8px 0; }
-      #summary { max-width: 360px; margin: 12px auto; text-align: left; }
-      #summary[hidden] { display: none; }
-      #summary h2 { font-size: 1.1em; margin: 0 0 6px; }
-      #summary p { margin: 4px 0; }
+      #panel h2 { font-size: 1.1em; margin: 0 0 6px; }
+      #panel section { margin: 0 0 16px; }
+      #panel p { margin: 4px 0; }
+      .headline { list-style: none; padding: 0; margin: 8px 0; }
+      .headline li { margin: 4px 0; }
+      .charts { display: flex; flex-wrap: wrap; gap: 16px; margin: 16px 0; }
+      .chart { margin: 0; max-width: 100%; }
+      .chart svg { max-width: 100%; height: auto; }
+      .table-wrap { overflow-x: auto; }
+      table { border-collapse: collapse; }
+      th, td { padding: 4px 8px; border-bottom: 1px solid #ccc; white-space: nowrap; }
+      td:not(:first-child):not(:last-child) { text-align: right; }
     </style>
   </head>
   <body>
-    <form id="player-form" hidden>
-      <label for="nickname">Nickname</label>
-      <input id="nickname" name="nickname" maxlength="20" required autocomplete="off" />
-      <button type="submit">Save</button>
-      <span id="player-error" role="alert"></span>
-    </form>
-    <canvas id="game" width="288" height="512"></canvas>
-    <section id="summary" hidden aria-live="polite"></section>
-    <p id="recording" aria-live="polite"></p>
-    <p id="status">Checking server…</p>
-    <p><a href="/stats.html">My stats</a></p>
+    <main id="layout">
+      <div id="play">
+        <p id="player-bar" hidden>
+          Playing as <strong id="player-name"></strong>
+          <button type="button" id="change-name">Change</button>
+        </p>
+        <form id="rename-form" hidden>
+          <label for="new-name">Name</label>
+          <input id="new-name" name="nickname" maxlength="20" autocomplete="off" />
+          <button type="submit">Save</button>
+          <button type="button" id="reroll-name">Random name</button>
+          <button type="button" id="cancel-rename">Cancel</button>
+          <span id="rename-error" role="alert"></span>
+        </form>
+        <canvas id="game" width="288" height="512"></canvas>
+        <p id="recording" aria-live="polite"></p>
+        <p id="status">Checking server…</p>
+      </div>
+      <aside id="panel">
+        <section id="last-game" aria-live="polite">
+          <h2>Last game</h2>
+          <div id="last-game-body"></div>
+        </section>
+        <section id="my-stats" aria-live="polite">
+          <h2>My stats</h2>
+          <div id="my-stats-body"></div>
+        </section>
+      </aside>
+    </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
