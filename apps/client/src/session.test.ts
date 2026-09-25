@@ -1,6 +1,6 @@
-import { FLAP_VELOCITY, replay } from '@flappy/engine';
+import { FLAP_VELOCITY, replay, replayEvents } from '@flappy/engine';
 import { describe, expect, it } from 'vitest';
-import { createSession, handle, snapshot, tick, type Session } from './session.ts';
+import { assignGame, createSession, handle, snapshot, tick, type Session } from './session.ts';
 
 const FLAP = { type: 'flap', source: 'space' } as const;
 const PAUSE = { type: 'pause' } as const;
@@ -124,5 +124,125 @@ describe('session', () => {
     expect(again.phase).toBe('ready');
     expect(again.seed).toBe(SCRIPT_SEED);
     expect(snapshot(tickUntilOver(again)).step).toBe(296);
+  });
+});
+
+const CLICK = { type: 'flap', source: 'click' } as const;
+
+describe('session recording', () => {
+  it('first flap records start then flap at step 0', () => {
+    const started = handle(createSession({ seed: 1 }), FLAP);
+    expect(started.events).toEqual([{ seq: 0, step: 0, type: 'start' }]);
+    const s = tick(started);
+    expect(s.events).toEqual([
+      { seq: 0, step: 0, type: 'start' },
+      { seq: 1, step: 0, type: 'flap', source: 'space' },
+    ]);
+  });
+
+  it('several presses in one step are all recorded', () => {
+    let s = tick(handle(createSession({ seed: 1 }), FLAP));
+    s = tick(s);
+    const before = s.game;
+    s = handle(handle(s, FLAP), CLICK);
+    s = tick(s);
+    const flaps = s.events.filter((e) => e.type === 'flap').slice(1);
+    expect(flaps).toEqual([
+      { seq: 2, step: 2, type: 'flap', source: 'space' },
+      { seq: 3, step: 2, type: 'flap', source: 'click' },
+    ]);
+    // The engine still applies a single flap for that step.
+    expect(s.game.step).toBe(before.step + 1);
+    expect(s.game.bird.vy).toBe(FLAP_VELOCITY);
+    expect(s.flaps).toEqual([0, 2]);
+  });
+
+  it('pause and resume are recorded', () => {
+    let s = tick(tick(tick(handle(createSession({ seed: 1 }), FLAP))));
+    s = handle(s, PAUSE);
+    s = tick(tick(s));
+    s = handle(s, PAUSE);
+    s = tick(s);
+    s = handle(s, PAUSE);
+    expect(s.events.slice(2)).toEqual([
+      { seq: 2, step: 3, type: 'pause' },
+      { seq: 3, step: 3, type: 'resume' },
+      { seq: 4, step: 4, type: 'pause' },
+    ]);
+  });
+
+  it('presses cleared by pause are not recorded', () => {
+    let s = tick(handle(createSession({ seed: 1 }), FLAP));
+    s = handle(s, FLAP);
+    s = handle(s, PAUSE);
+    s = handle(handle(s, CLICK), FLAP);
+    s = tick(handle(s, PAUSE));
+    expect(s.events.filter((e) => e.type === 'flap')).toEqual([
+      { seq: 1, step: 0, type: 'flap', source: 'space' },
+    ]);
+    expect(s.events.map((e) => e.type)).toEqual(['start', 'flap', 'pause', 'resume']);
+    expect(s.flaps).toEqual([0]);
+  });
+
+  it('death is recorded', () => {
+    const over = tickUntilOver(handle(createSession({ seed: 1 }), FLAP));
+    const last = over.events[over.events.length - 1];
+    expect(last).toEqual({
+      seq: over.events.length - 1,
+      step: over.game.death?.step,
+      type: 'death',
+      cause: over.game.death?.cause,
+      score: over.game.score,
+    });
+    // Flaps in over restart instead of being recorded; ticks in over add nothing.
+    expect(tick(over).events).toBe(over.events);
+  });
+
+  it('seq numbers are contiguous per game', () => {
+    let s = handle(createSession({ seed: 1 }), FLAP);
+    s = tick(handle(handle(s, FLAP), CLICK));
+    s = tick(handle(s, PAUSE));
+    s = handle(s, PAUSE);
+    s = assignGame(s, { gameId: 'g-late', seed: 9 });
+    s = tickUntilOver(handle(s, FLAP));
+    expect(s.events.map((e) => e.seq)).toEqual(s.events.map((_, i) => i));
+    expect(s.events.length).toBeGreaterThan(5);
+
+    const recorded = assignGame(createSession({ seed: 1 }), { gameId: 'g1', seed: 5 });
+    const played = tick(handle(recorded, FLAP));
+    for (const again of [handle(tickUntilOver(played), FLAP), handle(played, { type: 'restart' })]) {
+      expect(again.gameId).toBeNull();
+      expect(again.events).toEqual([]);
+      expect(tick(handle(again, FLAP)).events.map((e) => e.seq)).toEqual([0, 1]);
+    }
+  });
+
+  it('assignGame only swaps the seed before the game starts', () => {
+    const ready = createSession({ seed: 1 });
+    expect(ready.gameId).toBeNull();
+    const assigned = assignGame(ready, { gameId: 'g1', seed: 1234 });
+    expect(assigned.gameId).toBe('g1');
+    expect(assigned.seed).toBe(1234);
+    expect(assigned.game).toEqual(createSession({ seed: 1234 }).game);
+    expect(assigned.phase).toBe('ready');
+
+    const started = handle(ready, FLAP);
+    expect(assignGame(started, { gameId: 'g2', seed: 99 })).toBe(started);
+    const over = tickUntilOver(started);
+    expect(assignGame(over, { gameId: 'g3', seed: 99 })).toBe(over);
+  });
+
+  it('recorded events replay to the session result', () => {
+    const over = tickUntilOver(createSession({ seed: SCRIPT_SEED, script: SCRIPT_FLAPS }));
+    const flaps = over.events.filter((e) => e.type === 'flap');
+    expect(flaps).toHaveLength(7);
+    expect(flaps.every((e) => e.type === 'flap' && e.source === 'script')).toBe(true);
+    expect(flaps.map((e) => e.step)).toEqual(SCRIPT_FLAPS);
+    expect(over.events[0]).toEqual({ seq: 0, step: 0, type: 'start' });
+    const result = replayEvents(SCRIPT_SEED, over.events);
+    expect(result.score).toBe(over.game.score);
+    expect(result.deathStep).toBe(over.game.death?.step);
+    expect(result.deathCause).toBe(over.game.death?.cause);
+    expect(result.pressCount).toBe(7);
   });
 });
