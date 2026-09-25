@@ -1,9 +1,19 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
 const webPort = Number(process.env.WEB_PORT ?? 3000);
 const apiPort = Number(process.env.API_PORT ?? 3001);
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      // Two pages: the game and "My stats".
+      input: {
+        main: fileURLToPath(new URL("./index.html", import.meta.url)),
+        stats: fileURLToPath(new URL("./stats.html", import.meta.url)),
+      },
+    },
+  },
   server: {
     port: webPort,
     strictPort: true,
