@@ -66,6 +66,24 @@ describe('trendChartSvg', () => {
     for (const [, y] of flat) expect(y).toBeCloseTo(flat[0]![1]);
   });
 
+  it('empty chart text can be set', () => {
+    const svg = trendChartSvg([], { width: W, height: H, title: 't', emptyText: 'No games with flaps yet' });
+    expect(svg).toContain('No games with flaps yet');
+    expect(svg).not.toContain('No complete games yet');
+    expect(trendChartSvg([], { width: W, height: H, title: 't' })).toContain('No complete games yet');
+    expect(trendChartSvg([], { width: W, height: H, title: 't', emptyText: '<x>' })).toContain('&lt;x&gt;');
+  });
+
+  it('equal values get one y label', () => {
+    const yLabels = (svg: string) => svg.match(/<text[^>]*text-anchor="end"[^>]*>[^<]*<\/text>/g) ?? [];
+    for (const values of [[5], [2, 2, 2]]) {
+      const labels = yLabels(trendChartSvg(values, { width: W, height: H, title: 't' }));
+      expect(labels).toHaveLength(1);
+      expect(labels[0]).toContain(`>${values[0]}<`);
+    }
+    expect(yLabels(trendChartSvg([3, 7], { width: W, height: H, title: 't' }))).toHaveLength(2);
+  });
+
   it('escapes text', () => {
     const svg = trendChartSvg([1, 2], { width: W, height: H, title: '<b>&' });
     expect(svg).toContain('&lt;b&gt;&amp;');
