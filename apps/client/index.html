@@ -6,32 +6,46 @@
     <title>Flappy Bird</title>
     <!-- Empty icon, so the browser does not ask for /favicon.ico. -->
     <link rel="icon" href="data:," />
-    <style>
-      body { margin: 0; padding: 16px; font-family: sans-serif; text-align: center; }
-      /* touch-action: none keeps taps on the canvas from scrolling or zooming the page. */
-      #game { display: block; margin: 0 auto; touch-action: none; user-select: none; cursor: pointer; }
-      #player-form { margin: 0 auto 12px; }
-      #player-form[hidden] { display: none; }
-      #player-error { color: #b00020; }
-      #recording, #status { margin: 8px 0; }
-      #summary { max-width: 360px; margin: 12px auto; text-align: left; }
-      #summary[hidden] { display: none; }
-      #summary h2 { font-size: 1.1em; margin: 0 0 6px; }
-      #summary p { margin: 4px 0; }
-    </style>
   </head>
   <body>
-    <form id="player-form" hidden>
-      <label for="nickname">Nickname</label>
-      <input id="nickname" name="nickname" maxlength="20" required autocomplete="off" />
-      <button type="submit">Save</button>
-      <span id="player-error" role="alert"></span>
-    </form>
-    <canvas id="game" width="288" height="512"></canvas>
-    <section id="summary" hidden aria-live="polite"></section>
-    <p id="recording" aria-live="polite"></p>
-    <p id="status">Checking server…</p>
-    <p><a href="/stats.html">My stats</a></p>
+    <main id="layout">
+      <div id="play" class="cabinet">
+        <header class="marquee">
+          <h1>Flappy Bird</h1>
+        </header>
+        <p id="player-bar" hidden>
+          <span class="player-label">Playing as <strong id="player-name"></strong></span>
+          <button type="button" id="change-name" class="key">Change</button>
+        </p>
+        <form id="rename-form" hidden>
+          <label for="new-name">Name</label>
+          <input id="new-name" name="nickname" maxlength="20" autocomplete="off" />
+          <span class="rename-actions">
+            <button type="submit" class="key">Save</button>
+            <button type="button" id="reroll-name" class="key key-quiet">Random name</button>
+            <button type="button" id="cancel-rename" class="key key-quiet">Cancel</button>
+          </span>
+          <span id="rename-error" role="alert"></span>
+        </form>
+        <div class="bezel">
+          <canvas id="game" width="288" height="512" role="img" aria-label="Flappy Bird game"></canvas>
+        </div>
+        <div class="display">
+          <p id="recording" aria-live="polite"></p>
+          <p id="status">Checking server…</p>
+        </div>
+      </div>
+      <aside id="panel">
+        <section id="last-game" aria-live="polite">
+          <h2>Last game</h2>
+          <div id="last-game-body"></div>
+        </section>
+        <section id="my-stats" aria-live="polite">
+          <h2>My stats</h2>
+          <div id="my-stats-body"></div>
+        </section>
+      </aside>
+    </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

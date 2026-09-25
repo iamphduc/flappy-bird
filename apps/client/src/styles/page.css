@@ -1,0 +1,247 @@
+/* Page shell: layout, cabinet frame, marquee, name bar, rename form, controls, status display.
+ * Owner: P1. Direction and tokens: see the header of theme.css ("Dusk Cabinet").
+ * Shades mixed here from tokens (no raw colors):
+ *   --cabinet-body   surface 70% + bg      the cabinet's side panels
+ *   --marquee-shade  highlight 35% + shadow  hard shadow under the marquee title
+ *   --key-hover      accent 85% + text      lit green key on hover
+ *   --quiet-hover    surfaceAlt 80% + border  lit quiet key on hover
+ *   --key-edge       accent 60% + shadow    bottom edge of a green key
+ *   --quiet-edge     surfaceAlt 60% + shadow  bottom edge of a quiet key
+ */
+:root {
+  --cabinet-body: color-mix(in srgb, var(--color-surface) 70%, var(--color-bg));
+  --marquee-shade: color-mix(in srgb, var(--color-highlight) 35%, var(--color-shadow));
+  --key-hover: color-mix(in srgb, var(--color-accent) 85%, var(--color-text));
+  --quiet-hover: color-mix(in srgb, var(--color-surface-alt) 80%, var(--color-border));
+  --key-edge: color-mix(in srgb, var(--color-accent) 60%, var(--color-shadow));
+  --quiet-edge: color-mix(in srgb, var(--color-surface-alt) 60%, var(--color-shadow));
+
+  /* Frame sizes; the phone rule below shrinks them so the cabinet fits in 375 px. */
+  --page-pad: var(--space-4);
+  --cabinet-pad: var(--space-4);
+  --bezel-pad: var(--space-2);
+}
+
+body {
+  margin: 0;
+  padding: var(--page-pad) var(--page-pad) var(--space-6);
+  text-align: center;
+}
+
+/* Game on the left, panel on the right; stacked on narrow screens. */
+#layout {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+  justify-content: center;
+}
+@media (max-width: 720px) {
+  #layout {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+/* The cabinet: #play is as wide as the screen bezel; everything else wraps inside it. */
+#play {
+  flex: none;
+  box-sizing: border-box;
+  width: min-content;
+  max-width: 100%;
+  padding: 0 var(--cabinet-pad) var(--cabinet-pad);
+  background: var(--cabinet-body);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: calc(var(--px) * 2) calc(var(--px) * 2) 0 var(--color-shadow);
+}
+
+/* Marquee: the lit sign on top of the cabinet, with a row of pixel bulbs above and below. */
+.marquee {
+  position: relative;
+  margin: 0 calc(var(--cabinet-pad) * -1) var(--space-4);
+  padding: var(--space-5) var(--space-3);
+  background: var(--color-shadow);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+.marquee::before,
+.marquee::after {
+  content: '';
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  height: var(--px);
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-highlight) 0 var(--px),
+    transparent var(--px) calc(var(--px) * 3)
+  );
+}
+.marquee::before {
+  top: var(--space-2);
+}
+.marquee::after {
+  bottom: var(--space-2);
+}
+.marquee h1 {
+  margin: 0;
+  font-size: var(--text-2xl);
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--color-highlight);
+  text-shadow: var(--px) var(--px) 0 var(--marquee-shade);
+}
+
+/* Name bar: "Playing as <name>" with the Change key. */
+#player-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  text-align: left;
+}
+.player-label {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#player-name {
+  font-family: var(--font-pixel);
+  font-weight: var(--weight-pixel);
+  color: var(--color-highlight);
+}
+
+/* Rename form: a small panel on the cabinet. */
+#rename-form {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2);
+  text-align: left;
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+}
+#rename-form label {
+  color: var(--color-text-muted);
+}
+#new-name {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-2);
+  font-size: var(--text-md);
+  color: var(--color-text);
+  background: var(--color-shadow);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+.rename-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-2);
+  padding-bottom: var(--px);
+}
+/* Narrower keys, so Save, Random name and Cancel fit on one row inside the cabinet. */
+.rename-actions .key {
+  padding-inline: var(--space-2);
+}
+#rename-error {
+  display: block;
+  color: var(--color-danger);
+}
+
+/* Keys: arcade buttons. Green for the main action, quiet violet for the others.
+ * Pressed keys drop by one pixel step and lose their shadow. */
+.key {
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-pixel);
+  font-weight: var(--weight-pixel);
+  font-size: var(--text-md);
+  line-height: 1;
+  color: var(--color-accent-text);
+  background: var(--color-accent);
+  border: var(--border-width) solid var(--color-shadow);
+  border-radius: var(--radius);
+  box-shadow:
+    inset 0 calc(var(--px) * -1) 0 var(--key-edge),
+    var(--shadow-hard);
+  cursor: pointer;
+}
+.key-quiet {
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+  box-shadow:
+    inset 0 calc(var(--px) * -1) 0 var(--quiet-edge),
+    var(--shadow-hard);
+}
+@media (hover: hover) {
+  .key:hover:not(:disabled) {
+    background: var(--key-hover);
+  }
+  .key-quiet:hover:not(:disabled) {
+    background: var(--quiet-hover);
+  }
+}
+.key:active:not(:disabled) {
+  transform: translateY(var(--px));
+  box-shadow: inset 0 calc(var(--px) * -1) 0 var(--key-edge);
+}
+.key-quiet:active:not(:disabled) {
+  box-shadow: inset 0 calc(var(--px) * -1) 0 var(--quiet-edge);
+}
+.key:disabled {
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Screen bezel: a dark inset frame, lit from above (dark top-left edge, light bottom-right). */
+.bezel {
+  padding: var(--bezel-pad);
+  background: var(--color-shadow);
+  border: var(--border-width) solid;
+  border-color: var(--color-shadow) var(--color-border) var(--color-border) var(--color-shadow);
+}
+
+/* touch-action: none keeps taps on the canvas from scrolling or zooming the page. */
+#game {
+  display: block;
+  margin: 0 auto;
+  touch-action: none;
+  user-select: none;
+  cursor: pointer;
+  image-rendering: pixelated;
+}
+
+/* Status display under the screen: the recording line lit in yellow, the server line dimmer. */
+.display {
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-shadow);
+  border: var(--border-width) solid var(--color-surface-alt);
+}
+#recording,
+#status {
+  margin: 0;
+}
+#recording {
+  min-height: 1.5em;
+  color: var(--color-highlight);
+}
+#status {
+  color: var(--color-text-muted);
+}
+
+/* Phone: the frame and page padding get at most (375 - 288) / 2 px per side. */
+@media (max-width: 420px) {
+  :root {
+    --page-pad: var(--space-3);
+    --cabinet-pad: var(--space-3);
+    --bezel-pad: var(--space-1);
+  }
+  .marquee h1 {
+    font-size: var(--text-xl);
+  }
+}

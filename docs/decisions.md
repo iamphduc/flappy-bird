@@ -45,7 +45,7 @@ Consequences: at most one spare `created` game per player; `created` games with 
 ## 2026-09-24 — Client-chosen seeds only outside production
 Context: the `?seed=&flaps=` scripted run must be recorded and checked against known values.
 Decision: outside `NODE_ENV=production` the server accepts a `seed` on `POST /api/games` and stores `seedSource: 'dev'` (normal games: `'server'`). Scripted flaps use flap source `'script'`. A scripted run waits up to 3 s for its server game before it starts (dev only; real play never waits).
-Consequences: dev games can be told apart and left out of stats; production seeds stay server-only.
+Consequences: dev games can be told apart (they still count in stats; see "Which games count in the stats"); production seeds stay server-only.
 
 ## 2026-09-24 — Shared protocol lives in `packages/engine`
 Context: client and server need the same event and message types and the same replay function.
@@ -88,6 +88,27 @@ Decision: flap gaps are step gaps between consecutive applied flaps, turned into
 Consequences: paused time and network delay never count; timing matches what the player felt in the game.
 
 ## 2026-09-24 — "My stats" is its own page with inline-SVG charts
+_Superseded (the page part) by "Override: stats live in a right-hand panel beside the game" (2026-09-25); the inline-SVG charts stay._
 Context: the trend needs a view, and the client has no framework or chart library.
 Decision: "My stats" is a second Vite page (`stats.html`); charts are plain inline SVG strings built by a small helper.
 Consequences: no new dependency; the page is simple but the charts are basic.
+
+## 2026-09-25 — Funny names are made on the server
+Context: plan `arcade-refresh` drops the nickname form; a fresh browser should play a recorded game with no typing.
+Decision: when `POST /api/players` gets no `nickname`, the server picks `<Adjective> <Animal> <n>` (`n` 1–99, e.g. `Wobbly Otter 42`) from the word lists in `apps/server/src/names.ts`. Words are family-friendly, capitalized letters only, and every name fits the same 1–20 character rule as typed names (`cleanNickname`). Names are not unique. Existing players keep their names (no migration).
+Consequences: the word lists are easy to extend; two players can get the same name, which is fine because the player id is the identity.
+
+## 2026-09-25 — Players can rename
+Context: a generated name may not suit the player.
+Decision: `PATCH /api/players/:id` renames a player: `{ nickname }` is checked with the same `cleanNickname` rule (400 if bad), no nickname picks a new funny name (the page's `Random name`), an unknown id gives 404. Only the name changes; the id, games and stats stay attached. Like every other route it trusts the player id, with no auth — this refines "Nickname-only players".
+Consequences: anyone who knows a player id can rename that player (accepted, same as recording games under it). Registration now runs on every fresh visit with no typing, so rate limits matter more before any hosting.
+
+## 2026-09-25 — Override: stats live in a right-hand panel beside the game
+Context: plan `arcade-refresh` wants one page; "My stats is its own page" (2026-09-24) made players leave the game to see their trend. This is a deliberate override of that entry.
+Decision: `stats.html` is removed. One stats UI lives in a right-hand panel on the game page: a `Last game` card on top (the server summary, kept visible while the next game is played), then `My stats` (headline, charts, table). `My stats` reloads after the server has finished each game (when the Last game card gets its summary), with no page reload. On narrow screens (≤ 720 px) the panel stacks below the game.
+Consequences: Vite builds one page; stats code is shared with the game page; the panel's refresh follows the same wait-for-result rule as the summary, so it never races the server.
+
+## 2026-09-25 — Retro arcade look, drawn in code
+Context: plan `arcade-refresh` wants the whole app, canvas included, to look like a retro arcade game, with no image files and no outside services.
+Decision: the direction is "Dusk Cabinet", written as the header comment of `apps/client/src/styles/theme.css`: the page is a dusk-violet arcade cabinet around the game, with the stats panel as its scoreboard; hard pixel edges, no rounded corners or blurred shadows, a 4 px grid. The font is VT323 (SIL Open Font License 1.1), self-hosted through `@fontsource/vt323` (Vite bundles the woff2; no font CDN, ligatures off), one weight (400) with body text at 18 px or more. It replaced Pixelify Sans after review: at 14-20 px Pixelify's C, 5 and 2 read as O, S and 8. Palette roles: `bg`/`surface`/`surfaceAlt` for the cabinet and panels, `text`/`textMuted`, `accent` buttons (pipe green) with `accentText`, `highlight` for marquee and scores (bird yellow), `danger`, `focus`, `border`, `chartLine` (sky cyan), plus `shadow` and `scrim`. The tokens have one source: `apps/client/src/theme.ts` (`PALETTE`, `PIXEL_FONT` / `BODY_FONT`) mirrored in `theme.css` as `--color-*` / `--font-*`, kept equal by `theme.test.ts`. Contrast minimums, checked by `CONTRAST_PAIRS`: 4.5:1 for text, 3:1 for the focus ring and chart lines. The canvas is drawn in `render.ts` with canvas calls only, sized and placed from engine constants and game state, with no images and no wall-clock animation (it only moves with the game).
+Consequences: the client gets one font package (a runtime dependency); a later restyle starts from the tokens, not from raw colors; the engine, its constants, the recording and replays are untouched, so past games and the seed-42 smoke values stay the same.

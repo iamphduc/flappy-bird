@@ -11,7 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@flappy/engine": "workspace:*"
+    "@flappy/engine": "workspace:*",
+    "@fontsource/vt323": "^5.3.0"
   },
   "devDependencies": {
     "vite": "^7.0.0",
