@@ -1,6 +1,6 @@
 # Plan: Flappy Bird with player efficiency tracking
 
-_Generated: 2026-09-24 · Status: active · Grilled-with: grill-me_
+_Generated: 2026-09-24 · Status: archived · Grilled-with: grill-me_
 
 <!-- autopilot-run: started=2026-09-25T02:16:12Z sprints=3 waves=7 -->
 
